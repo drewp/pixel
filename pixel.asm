@@ -1,23 +1,19 @@
-;File Demo.asm
-;Assembly code for PIC 16F84 microcontroller.
 
+;;;  serial code adapted from code with this header
+; FILE: rcv1_1.asm
+; AUTH: P.Oh
+; DATE: 04/27/02 18:00 1.0 - WORKS
+;	04/27/02 18:35 1.1
+; DESC: 1.0: PC-to-PIC serial communications.  LEDs display binary equivalent
+;            of key typed on PC
+;       1.1: Same as 1.0 but eliminates need for switch
+; REFS: rcv4800.asm in PIC'n Techniques p. 219
 
-;Blinks LEDs on PORTB outputs in a sequential pattern.
-;With a 75 kHz oscillator, each LED stays on about 1/2 second.
-
-
-;CPU configuration
-;   PIC 16F84, oscillator, watchdog timer off, power-up timer enabled.
-;   Note: two underscore characters before the config command.
-
-
+	
        processor 16f84A
        include  <p16f84a.inc>
        __config _XT_OSC & _WDT_OFF & _PWRTE_ON
- 
- 
-J	equ  H'1F'    
-K	equ  H'1E'     
+
 T	equ	H'20'
 BRIGHT_R equ H'21' 	;  low 03
 BRIGHT_G equ H'22'		; mid 30
@@ -33,22 +29,23 @@ PIN_B	equ	2
  
         org   0     ;Start program at address zero.
 	
+	
+	;; hardware setup
         bsf 	STATUS, RP0	
         movlw	b'00000001'	; A0 is input and the rest are output
 	movwf	TRISA
 
-	
-       ;Set PORTB as output and initialize it.
         bsf STATUS, RP0 	; tris bank
-	movlw   B'00000000'  ;Move 8 binary zeros to the W (working) register.
+	movlw   B'00000000'  ; PORTB to output
 	movwf TRISB		
 
 	bcf STATUS, RP0		;  portb bank
 	clrf	PORTB		; PORTB = 0
 
+	;; pwm setup
 	clrf	T		; T = 0
 
-	movlw H'FF'
+	movlw H'00'
 	movwf BRIGHT_R
 
 	movlw H'30'
@@ -56,60 +53,9 @@ PIN_B	equ	2
 
 	movlw H'FF'
 	movwf BRIGHT_B
-	
-	
-mloop:
 
-	call rcv4800
-	movf rcvReg, w
-	movwf BRIGHT_R
-	
-	movf	T,w		; W = T
-
-	addwf	BRIGHT_R,W	; W = <brightness> + W
-	btfss	STATUS,C	; 
-	goto nored
-	bsf	PORTB,PIN_R
-	goto donered
-nored	bcf	PORTB,PIN_R
-donered
-	
-	addwf	BRIGHT_G,W		; W = <brightness> + W
-	btfss	STATUS,C
-	goto nogrn
-	bsf	PORTB,PIN_G
-	goto donegrn
-nogrn	bcf	PORTB,PIN_G
-donegrn
-		
-	addwf	BRIGHT_B,W		; W = <brightness> + W
-	btfss	STATUS,C
-	goto noblu
-	bsf	PORTB,PIN_B
-	goto doneblu
-noblu	bcf	PORTB,PIN_B
-doneblu	
-
-	
-       ;Waste some time by executing nested loops.
- 
-        movlw   D'2'
-        movwf   J		; J = W = <sqrt(loops)>
-jloop   movwf   K		; K = W
-kloop   decfsz   K,f		; K = K - 1, if K:	
-        goto      kloop		;               goto kloop
-        decfsz   J,f		; J = J - 1, if J:	
-        goto      jloop		;               goto jloop
- 
-	incf	T,f		; T = T + 1
-	 
-	goto      mloop
-
-
-	
-	;; --------------------------------------------------------------
-
-rcv4800	bcf	INTCON, 5	; Disable TMR0 interrupts
+	;; serial setup
+	bcf	INTCON, 5	; Disable TMR0 interrupts
 	bcf	INTCON,	7	; Disable global interrupts
 	clrf	TMR0		; Clear timer/counter
 	clrwdt			; Clear wdt prep prescaler assign
@@ -118,11 +64,14 @@ rcv4800	bcf	INTCON, 5	; Disable TMR0 interrupts
 	movlw	b'11011000'	; set up timer/counter
 	movwf	OPTION_REG
 
+		
+main
 	bcf	STATUS, RP0	; 
-	movlw	0x08		; Init shift counter
+	movlw	0x08		; count = 8
 	movwf	count
 	
-sbit	btfsc	PORTA, 0	; Look for start bit
+sbit	call pwmstep
+	btfsc	PORTA, 0	; Look for start bit
 	goto 	sbit		; For Mark
 	
 	movlw	0x98		; 
@@ -150,10 +99,49 @@ time2	btfss	INTCON, 2	; Timer overflow?
 	goto	time2		; No
 time3	btfss	INTCON, 2	; Timer overflow?
 	goto	time3		; No
-	return			; Yes, byte received
+
+
+
+	movf rcvReg, w
+	movwf BRIGHT_R
+	movwf BRIGHT_B
+	movwf BRIGHT_G
+	comf BRIGHT_G,f
+
+	
+	goto main
+	
 ;-----------------------------------------------------------------------
 
 
+pwmstep
+	movf	T,w		; W = T
+
+	addwf	BRIGHT_R,W	; W = <brightness> + W
+	btfss	STATUS,C	; 
+	goto nored
+	bsf	PORTB,PIN_R
+	goto donered
+nored	bcf	PORTB,PIN_R
+donered
+	
+	addwf	BRIGHT_G,W		; W = <brightness> + W
+	btfss	STATUS,C
+	goto nogrn
+	bsf	PORTB,PIN_G
+	goto donegrn
+nogrn	bcf	PORTB,PIN_G
+donegrn
+		
+	addwf	BRIGHT_B,W		; W = <brightness> + W
+	btfss	STATUS,C
+	goto noblu
+	bsf	PORTB,PIN_B
+	goto doneblu
+noblu	bcf	PORTB,PIN_B
+doneblu	
+	incf	T,f		; T = T + 1
+	return
 
 
 	
