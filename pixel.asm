@@ -14,15 +14,22 @@
        include  <p16f84a.inc>
        __config _XT_OSC & _WDT_OFF & _PWRTE_ON
 
-T	equ	H'20'
-BRIGHT_R equ H'21' 	;  low 03
-BRIGHT_G equ H'22'		; mid 30
-BRIGHT_B equ H'23'		; hi ff
-rcvReg	equ	0x0c	; serial input byte
-count	equ	0x0d	; serial
-temp	equ	0x0e	; serial
+
 	
-PIN_R	equ	0
+rcvReg	equ	0x0c	; serial input byte
+getch_fail equ	0x0d	; serial read failed
+count	equ	0x0e	; serial
+temp	equ	0x0f	; serial
+
+addr_hi	equ	0x10
+addr_lo equ	0x11
+
+T	equ	H'20'		; pwm counter
+BRIGHT_R equ	H'21'		;  low 03
+BRIGHT_G equ	H'22'		; mid 30
+BRIGHT_B equ	H'23'		; hi ff
+	
+PIN_R	equ	0		; output pins, on PORTB
 PIN_G	equ	1
 PIN_B	equ	2
 
@@ -45,16 +52,22 @@ PIN_B	equ	2
 	;; pwm setup
 	clrf	T		; T = 0
 
-	movlw H'00'
+	movlw H'30'
 	movwf BRIGHT_R
 
 	movlw H'30'
 	movwf BRIGHT_G
 
-	movlw H'FF'
+	movlw H'30'
 	movwf BRIGHT_B
 
 	;; serial setup
+	movlw	0x00
+	movwf	addr_hi
+
+	movlw	0xee
+	movwf	addr_lo
+	
 	bcf	INTCON, 5	; Disable TMR0 interrupts
 	bcf	INTCON,	7	; Disable global interrupts
 	clrf	TMR0		; Clear timer/counter
@@ -66,13 +79,59 @@ PIN_B	equ	2
 
 		
 main
+	bcf	STATUS, RP0
+	
+sbit0	call pwmstep
+	btfsc	PORTA, 0	; Look for start bit
+	goto 	sbit0		; For Mark
+
+	call getch
+
+	movf rcvReg, w
+	subwf addr_hi,w		; if addr_hi - rcvReg != 0:
+	btfss STATUS, Z
+	goto main		;   goto main
+
+sbit1	call pwmstep
+	btfsc PORTA, 0		; wait for start bit
+	goto sbit1
+
+	call getch
+
+	movf rcvReg, w
+	subwf addr_lo,w		; if addr_lo - rcvReg != 0:	
+	btfss STATUS, Z
+	goto main		;   goto main
+	
+
+sbit2	call pwmstep
+	btfsc PORTA, 0		
+	goto sbit2
+	call getch	
+	movf rcvReg, w
+	movwf BRIGHT_R		; BRIGHT_R = getch()
+
+sbit3	call pwmstep
+	btfsc PORTA, 0		
+	goto sbit3
+	call getch	
+	movf rcvReg, w
+	movwf BRIGHT_G		; BRIGHT_G = getch()
+
+sbit4	call pwmstep
+	btfsc PORTA, 0		
+	goto sbit4
+	call getch	
+	movf rcvReg, w
+	movwf BRIGHT_B		; BRIGHT_B = getch()
+
+	goto main
+;-----------------------------------------------------------------------
+	;; get serial char, save in rcvReg, getch_fail is set if there was err
+getch	
 	bcf	STATUS, RP0	; 
 	movlw	0x08		; count = 8
 	movwf	count
-	
-sbit	call pwmstep
-	btfsc	PORTA, 0	; Look for start bit
-	goto 	sbit		; For Mark
 	
 	movlw	0x98		; 
 	movwf	TMR0		; Load and start timer/counter
@@ -81,8 +140,12 @@ sbit	call pwmstep
 time1	btfss	INTCON, 2	; Has the timer (bit 2) overflowed?  Skip next line if 1
 	goto	time1		; No
 	
-	btfsc	PORTA, 0	; Start bit still low?
-	goto 	sbit		; False start, go back
+	btfss	PORTA, 0	; if PORTA[0] == 0:	
+	goto contin
+	movlw   0x01
+	movwf   getch_fail      ;   getch_fail = 1
+	return			;   return
+contin
 	movlw	0x30		; real, define N for timer
 	movwf	TMR0		; start timer/counter - bit time
 	bcf	INTCON, 2	; Clear TMR0 overflow flag
@@ -100,21 +163,13 @@ time2	btfss	INTCON, 2	; Timer overflow?
 time3	btfss	INTCON, 2	; Timer overflow?
 	goto	time3		; No
 
-
-
-	movf rcvReg, w
-	movwf BRIGHT_R
-	movwf BRIGHT_B
-	movwf BRIGHT_G
-	comf BRIGHT_G,f
-
-	
-	goto main
+	clrf	getch_fail	; getch_fail = 0
+	return
 	
 ;-----------------------------------------------------------------------
-
-
+	;; update LEDs based on T, incr T
 pwmstep
+	bcf	STATUS, RP0
 	movf	T,w		; W = T
 
 	addwf	BRIGHT_R,W	; W = <brightness> + W
@@ -147,6 +202,3 @@ doneblu
 	
 	end
 
-
-	;; import serial; ser = serial.Serial(port="/dev/ttyS0")
-	;; ser.write("\xc1")
