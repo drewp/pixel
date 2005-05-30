@@ -14,7 +14,6 @@
        include  <p16f84a.inc>
        __config _XT_OSC & _WDT_OFF & _PWRTE_ON
 
-
 	
 rcvReg	equ	0x0c	; serial input byte
 getch_fail equ	0x0d	; serial read failed
@@ -49,6 +48,16 @@ PIN_B	equ	2
 	bcf STATUS, RP0		;  portb bank
 	clrf	PORTB		; PORTB = 0
 
+	bsf	STATUS, RP0	; 	
+	movlw	b'11011000'	; set up timer/counter:	
+	; no PORTB pullup
+	; int on rising edge
+	; TMR0 uses internal instruction cycle clock
+	; tmr falling edge
+	; prescale on tmr 
+	; 1:2 tmr prescale
+	movwf	OPTION_REG
+	
 	;; pwm setup
 	clrf	T		; T = 0
 
@@ -68,14 +77,11 @@ PIN_B	equ	2
 	movlw	0xee
 	movwf	addr_lo
 	
-	bcf	INTCON, 5	; Disable TMR0 interrupts
-	bcf	INTCON,	7	; Disable global interrupts
+	bcf	INTCON, T0IE	; Disable TMR0 interrupts
+	bcf	INTCON,	GIE	; Disable global interrupts
 	clrf	TMR0		; Clear timer/counter
 	clrwdt			; Clear wdt prep prescaler assign
 
-	bsf	STATUS, RP0	; 	
-	movlw	b'11011000'	; set up timer/counter
-	movwf	OPTION_REG
 
 		
 main
@@ -134,10 +140,10 @@ getch
 	movwf	count
 	
 	movlw	0x98		; 
-	movwf	TMR0		; Load and start timer/counter
+	movwf	TMR0		; TMR0 = 304us
 	
-	bcf	INTCON, 2	; Clear TMR0 overflow flag
-time1	btfss	INTCON, 2	; Has the timer (bit 2) overflowed?  Skip next line if 1
+	bcf	INTCON, T0IF	; Clear TMR0 overflow flag
+time1	btfss	INTCON, T0IF	; Has the timer (bit 2) overflowed?  Skip next line if 1
 	goto	time1		; No
 	
 	btfss	PORTA, 0	; if PORTA[0] == 0:	
@@ -146,21 +152,24 @@ time1	btfss	INTCON, 2	; Has the timer (bit 2) overflowed?  Skip next line if 1
 	movwf   getch_fail      ;   getch_fail = 1
 	return			;   return
 contin
-	movlw	0x30		; real, define N for timer
-	movwf	TMR0		; start timer/counter - bit time
-	bcf	INTCON, 2	; Clear TMR0 overflow flag
-time2	btfss	INTCON, 2	; Timer overflow?
+	
+	movlw	0x30		; 
+	movwf	TMR0		; TMR0 = 96us
+	bcf	INTCON, T0IF	; Clear TMR0 overflow flag
+time2	btfss	INTCON, T0IF	; Timer overflow?
 	goto	time2		; No
-	movlw	0x30		; Yes, define N for timer
-	movwf	TMR0		; Start timer/counter
-	bcf	INTCON, 2;	; Clear TMR0 overflow flah
+	
+	movlw	0x30		; 
+	movwf	TMR0		; TMR0 = 96us
+	bcf	INTCON, T0IF;	; Clear TMR0 overflow flag
 	movf	PORTA, w	; Read port A
 	movwf	temp		; Store
 	rrf	temp, f		; Rotate bit 0 into carry flag
 	rrf	rcvReg, f	; Rotate carry into rcvReg bit 7
 	decfsz	count, f	; Shifted 8?
 	goto	time2		; No
-time3	btfss	INTCON, 2	; Timer overflow?
+	
+time3	btfss	INTCON, T0IF	; Timer overflow?
 	goto	time3		; No
 
 	clrf	getch_fail	; getch_fail = 0
@@ -173,23 +182,25 @@ pwmstep
 	movf	T,w		; W = T
 
 	addwf	BRIGHT_R,W	; W = <brightness> + W
-	btfss	STATUS,C	; 
+	btfss	STATUS,C	; PORTB[PIN_R] = Carry
 	goto nored
 	bsf	PORTB,PIN_R
 	goto donered
 nored	bcf	PORTB,PIN_R
 donered
 	
-	addwf	BRIGHT_G,W		; W = <brightness> + W
-	btfss	STATUS,C
+	movf	T,w		; W = T
+	addwf	BRIGHT_G,W	; W = <brightness> + W
+	btfss	STATUS,C	; PORTB[PIN_G] = Carry
 	goto nogrn
 	bsf	PORTB,PIN_G
 	goto donegrn
 nogrn	bcf	PORTB,PIN_G
 donegrn
 		
-	addwf	BRIGHT_B,W		; W = <brightness> + W
-	btfss	STATUS,C
+	movf	T,w		; W = T
+	addwf	BRIGHT_B,W	; W = <brightness> + W
+	btfss	STATUS,C	; PORTB[PIN_B] = Carry
 	goto noblu
 	bsf	PORTB,PIN_B
 	goto doneblu
