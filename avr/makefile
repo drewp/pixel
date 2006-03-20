@@ -3,6 +3,10 @@
 go: program-prog
 
 MCU = attiny2313
+
+# 8MHz internal oscillator with no clk div
+FUSE = 0xe4:m
+
 F_CPU = 8000000 # 8 MHz
 CFLAGS = -g -Os \
 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
@@ -12,6 +16,7 @@ CFLAGS = -g -Os \
 
 program-%: %.elf
 	avr-objcopy -O ihex -R .eeprom $< _program.hex
+	avrdude -p $(MCU) -P /dev/parport0 -c dt006 -u -U lfuse:w:$(FUSE)
 	avrdude -p $(MCU) -P /dev/parport0 -c dt006 -U flash:w:_program.hex
 
 %.o: %.c
