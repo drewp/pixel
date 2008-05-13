@@ -1,0 +1,40 @@
+from __future__ import division
+import sys
+from PIL import Image
+import Numeric as num
+import pygame
+
+surf = pygame.display.set_mode((800,400), pygame.DOUBLEBUF, 32)
+clk = pygame.time.Clock()
+pygame.font.init()
+font = pygame.font.SysFont("trebuchetms", 20)
+
+leds = 10
+
+img = Image.open(sys.argv[1])
+img = img.resize((img.size[0], leds), Image.ANTIALIAS)
+
+overlap = 50
+t = 0
+while 1:
+    pygame.event.pump()
+    clk.tick(30)
+    surf.fill((0,0,0))
+
+    for y in range(leds):
+        x = t % (img.size[0] - overlap)
+        col = img.getpixel((x, y))
+        if x < overlap:
+            blend = x / overlap
+            tailCol = img.getpixel((img.size[0] - overlap + x, y))
+            col = blend * num.array(col) + (1 - blend) * num.array(tailCol)
+
+        pygame.draw.rect(surf, col, (800 / leds * y, 5,
+                                     800 / leds * .8, 100))
+
+        surf.blit(font.render("t=%s width=%s" % (t, img.size[0]),
+                              True, (255, 255, 0)),
+                  (5, 380))
+        
+    t = t + 1
+    pygame.display.update()
