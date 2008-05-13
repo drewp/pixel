@@ -1,0 +1,26 @@
+#!/usr/bin/python
+
+import time,sys
+import ow
+from xml.utils import iso8601
+
+def timestamp():
+     tz=time.altzone
+     return iso8601.tostring(int(time.time()),tz)
+
+
+ow.init("/dev/ttyS1")
+
+sensors = [ow.Sensor("/%s" % addr) for addr in
+           ["10.4F718D000800", "10.14958D000800"]]
+
+while 1:
+     try:
+          t = " ".join([s.temperature.strip() for s in sensors])
+     except AttributeError:
+          pass
+     else:
+          print time.time(), timestamp(), "temps",t
+          sys.stdout.flush()
+     time.sleep(5*60)
+    

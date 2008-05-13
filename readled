@@ -1,0 +1,17 @@
+from __future__ import division
+import random, itertools, time
+import Tkinter as tk
+import getserial
+
+serial = getserial.getSerial()
+
+while 1:
+    ch = serial.read(1)
+    if ch != "":
+        ch2 = serial.read(1)
+        if ch2 != "":
+            val = (ord(ch2) << 8) + ord(ch)
+            if val > 20000:
+                serial.read(1) # switch hi/lo bytes
+            print time.time(), "read %02X %02X %03d %s" % (
+                ord(ch2), ord(ch), val, "*" * int(val / 30))

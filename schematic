@@ -1,0 +1,40 @@
+superbright leds:
+
+ red: rl5-r12008 2.1V at 20mA, rated to 50mA
+ grn: rl5-g13008 3.5V at 20mA, rated to 30mA
+ blu: rl5-b4630 3.5V at 20mA, rated to 30mA
+ 
+led resistors:
+  red: 96
+  grn: 50
+  blu: 50
+
+baud:
+  2006-03-19 version:  19200 had some trouble; 9600 is ok
+
+programming parallel cable:
+  oran: 10
+  blu: 47 -> 18
+  brn: 1
+  wh-br: 47 -> 19
+  grn: 200 -> 17
+
+http://chaokhun.kmitl.ac.th/~kswichit/MAX232/MAX232.htm
+pwm demo:
+http://www.nongnu.org/avr-libc/user-manual/group__demo__project.html
+http://www.ladyada.net/make/minipov2/minipov21sch.PNG
+
+
+shopping:
+$0.58 MJE2955T Transistor    * PNP power transistor    * Min. hfe@ Ic: 20 @ 4A 
+$0.53 MJE3055T Transistor    * NPN power transistor    * Min. hFE@ Ic: 20 @ 4A 
+fatter heat shrink
+cheap leds
+
+
+---
+led sensor test:
+B3 right led -
+B4 left led +
+B5 left led -
+

@@ -10,53 +10,40 @@
 ; REFS: rcv4800.asm in PIC'n Techniques p. 219
 
 	
-       processor 16f84A
-       include  <p16f84a.inc>
-       __config _XT_OSC & _WDT_OFF & _PWRTE_ON
+       processor 10f200
+       include  <p10f200.inc>
+       __config _WDT_OFF & _CP_OFF & _MCLRE_OFF
 
 	
-rcvReg	equ	0x0c	; serial input byte
-getch_fail equ	0x0d	; serial read failed
-count	equ	0x0e	; serial
-temp	equ	0x0f	; serial
+rcvReg	equ	0x10	; serial input byte
+getch_fail equ	0x11	; serial read failed
+count	equ	0x12	; serial
+temp	equ	0x13	; serial
 
-addr_hi	equ	0x10
-addr_lo equ	0x11
+addr_hi	equ	0x14
+addr_lo equ	0x15
 
-T	equ	H'20'		; pwm counter
-BRIGHT_R equ	H'21'		;  low 03
-BRIGHT_G equ	H'22'		; mid 30
-BRIGHT_B equ	H'23'		; hi ff
+T	equ	H'16'		; pwm counter
+BRIGHT_R equ	H'17'		;  low 03
+BRIGHT_G equ	H'18'		; mid 30
+BRIGHT_B equ	H'19'		; hi ff
 	
-PIN_R	equ	0		; output pins, on PORTB
+PIN_R	equ	0		; output bits, on GPIO
 PIN_G	equ	1
 PIN_B	equ	2
+	                        ;; GPIO[3] is the serial input
 
  
         org   0     ;Start program at address zero.
 	
-	
-	;; hardware setup
-        bsf 	STATUS, RP0	
-        movlw	b'00000001'	; A0 is input and the rest are output
-	movwf	TRISA
-
-        bsf STATUS, RP0 	; tris bank
-	movlw   B'00000000'  ; PORTB to output
-	movwf TRISB		
-
-	bcf STATUS, RP0		;  portb bank
-	clrf	PORTB		; PORTB = 0
-
-	bsf	STATUS, RP0	; 	
 	movlw	b'11011000'	; set up timer/counter:	
 	; no PORTB pullup
 	; int on rising edge
 	; TMR0 uses internal instruction cycle clock
 	; tmr falling edge
-	; prescale on tmr 
-	; 1:2 tmr prescale
-	movwf	OPTION_REG
+	; NO prescale on tmr 
+	; 1:2 tmr prescale (unused)
+	option
 	
 	;; pwm setup
 	clrf	T		; T = 0
@@ -77,18 +64,16 @@ PIN_B	equ	2
 	movlw	0xee
 	movwf	addr_lo
 	
-	bcf	INTCON, T0IE	; Disable TMR0 interrupts
-	bcf	INTCON,	GIE	; Disable global interrupts
 	clrf	TMR0		; Clear timer/counter
 	clrwdt			; Clear wdt prep prescaler assign
 
 
 		
 main
-	bcf	STATUS, RP0
+
 	
 sbit0	call pwmstep
-	btfsc	PORTA, 0	; Look for start bit
+	btfsc	GPIO, 3	; Look for start bit
 	goto 	sbit0		; For Mark
 
 	call getch
@@ -99,7 +84,7 @@ sbit0	call pwmstep
 	goto main		;   goto main
 
 sbit1	call pwmstep
-	btfsc PORTA, 0		; wait for start bit
+	btfsc GPIO, 3		; wait for start bit
 	goto sbit1
 
 	call getch
@@ -111,21 +96,21 @@ sbit1	call pwmstep
 	
 
 sbit2	call pwmstep
-	btfsc PORTA, 0		
+	btfsc GPIO, 3		
 	goto sbit2
 	call getch	
 	movf rcvReg, w
 	movwf BRIGHT_R		; BRIGHT_R = getch()
 
 sbit3	call pwmstep
-	btfsc PORTA, 0		
+	btfsc GPIO, 3		
 	goto sbit3
 	call getch	
 	movf rcvReg, w
 	movwf BRIGHT_G		; BRIGHT_G = getch()
 
 sbit4	call pwmstep
-	btfsc PORTA, 0		
+	btfsc GPIO, 3		
 	goto sbit4
 	call getch	
 	movf rcvReg, w
@@ -135,7 +120,6 @@ sbit4	call pwmstep
 ;-----------------------------------------------------------------------
 	;; get serial char, save in rcvReg, getch_fail is set if there was err
 getch	
-	bcf	STATUS, RP0	; 
 	movlw	0x08		; count = 8
 	movwf	count
 	
@@ -146,7 +130,7 @@ getch
 time1	btfss	INTCON, T0IF	; Has the timer (bit 2) overflowed?  Skip next line if 1
 	goto	time1		; No
 	
-	btfss	PORTA, 0	; if PORTA[0] == 0:	
+	btfss	GPIO, 3	; if PORTA[0] == 0:	
 	goto contin
 	movlw   0x01
 	movwf   getch_fail      ;   getch_fail = 1
@@ -178,7 +162,6 @@ time3	btfss	INTCON, T0IF	; Timer overflow?
 ;-----------------------------------------------------------------------
 	;; update LEDs based on T, incr T
 pwmstep
-	bcf	STATUS, RP0
 	movf	T,w		; W = T
 
 	addwf	BRIGHT_R,W	; W = <brightness> + W

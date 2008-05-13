@@ -1,24 +1,11 @@
 #!/usr/bin/python
 
 from __future__ import division
-import random
+import random, itertools
 import Tkinter as tk
-import serial
-ser = None
-ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
-for port in ports:
-    try:
-        ser = serial.Serial(port=port,baudrate=9600)
-        break
-    except serial.serialutil.SerialException, e:
-        print e,
-	if port != ports[-1]:
-            print ", trying next port"
-        else:
-            print
-if ser is None:
-    raise RuntimeError("can't open any ports")
-print "opened port %s" % port
+import getserial
+
+ser = getserial.getSerial()
 
 root = tk.Tk()
 
@@ -27,6 +14,7 @@ chans = dict(r=tk.IntVar(), g=tk.IntVar(), b=tk.IntVar())
 def change():
 #    ser.write(chr(int(chans['r'].get())))
     ser.write("\x00\xee%s%s%s" % tuple([chr(int(chans[c].get())) for c in 'rgb']))
+#    print "readback", repr(ser.read(1))
 
 for chan in 'rgb':
     s = tk.Scale(root, label=chan,from_=255, to=0, showval=1,
@@ -60,9 +48,64 @@ def loop():
         x = 511-val
     else:
         x = val
-    ser.write(chr(x))
+#    ser.write(chr(x))
     val += 3
     if val > 511: val = 0
     root.after(20,loop)
 #loop()
+
+
+
+
+for key, bit in [("1", 2), ("2", 3), ("3", 4), ("4", 5)]:
+    root.bind("<KeyPress-%s>" % key,
+              lambda ev, bit=bit: ser.write(chr(1 << bit)))
+    root.bind("<KeyRelease-%s>" % key,
+              lambda ev: ser.write("\x00"))
+
+
+_cmds = []
+def push_cmd(byte):
+    _cmds.append(byte)
+
+def send_cmds():
+    if _cmds:
+        c = _cmds.pop(0)
+        print "push %r (%d left)" % (c, len(_cmds))
+        ser.write(c)
+        #print "write %d" % (len(_cmds))
+        #ser.write("".join(_cmds))
+        #_cmds[:] = []
+    root.after(10, send_cmds)
+#send_cmds()
+        
+
+seq = [
+    4,
+    4,
+    4 + 16,
+    16,
+    16,
+    16 + 8,
+    8,
+    8,
+    8 + 32,
+    32,
+    32,
+    32 + 4,
+    
+       ] # portd bit
+
+
+## for c in itertools.cycle(seq):
+##     push_cmd(chr(c))
+##     if len(_cmds) > 1000:
+##         break
+
+
+s = tk.Scale(root, label="stepper", from_=0, to=100, showval=1,
+             command=lambda v: push_cmd(chr(seq[int(v) % len(seq)])))
+s.pack(side='left', fill='both', exp=1)
+
+
 tk.mainloop()

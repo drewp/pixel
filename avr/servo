@@ -1,0 +1,16 @@
+
+  // servo wants .800 - 2.200 ms every 20ms
+    PORTB |= 0x01;
+    delay_ms10(bright_r);
+    PORTB &= ~0x01;
+    delay_ms10(200-bright_r);
+
+void delay_ms10(long int ms) {
+  unsigned long int timer;
+
+  while (ms != 0) {
+    // this number is dependant on the clock frequency
+    for (timer=0; timer <= 420/3; timer++);
+    ms--;
+  }
+}

@@ -1,0 +1,26 @@
+body {
+    background: #000;
+    color: #f00;
+    font-family: sans-serif;
+}
+h2 {
+    color: #6d0;
+}
+
+.delicious-network-username {
+    padding: 8px;
+    background: #112;
+}
+.delicious-extended {
+    margin-left: 2em;
+    margin-bottom: .1em;
+    color: #060;
+
+}
+.delicious-post {
+    margin: 6px;
+    padding: 4px;
+    border:  solid #224;
+    border-width: 1px 0 0 1px;
+}
+
