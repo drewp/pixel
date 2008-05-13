@@ -1,0 +1,54 @@
+#!/usr/bin/python
+from __future__ import division
+import pygame, random
+
+surf = pygame.display.set_mode((800,400), pygame.DOUBLEBUF, 32)
+
+
+ball = pygame.image.load("redball.png").convert(24, 0)
+#ball = pygame.transform.scale(ball, (50, 50))
+
+class SB(object):
+    def __init__(self, x, y):
+        self.pos = x, y
+        self.val = 0
+    
+    def draw(self, surf):
+        ball.set_alpha(self.val)
+        surf.blit(ball, self.pos)
+
+leds = []
+for x in range(50, 650, 120):
+    for y in [50, 250]:
+        leds.append(SB(x, y))
+
+clk = pygame.time.Clock()
+cursor = 2
+move = 10
+cursVal = 256
+while 1:
+    pygame.event.pump()
+    clk.tick(30)
+    surf.fill((0,0,0))
+
+    move -= 1
+    if move < 0:
+        cursor = random.randrange(len(leds))
+        cursVal = random.randrange(150, 250)
+        move = random.randrange(1, 4)
+    leds[cursor].val = cursVal
+
+        
+    for i in range(len(leds)):
+        v = leds[i].val
+        # convolve a wave function? cursors that quickly move, and
+        # there are a few going at once? then cells don't blur with
+        # neighbors, they just decay
+        if i > 0:
+            v = v * .8 + leds[i-1].val * .2
+        if i < len(leds) - 1:
+            v = v * .8 + leds[i+1].val * .2
+        leds[i].val = v * .985
+    [x.draw(surf) for x in leds]
+
+    pygame.display.update()
