@@ -1,40 +1,125 @@
 from __future__ import division
 import sys
-from PIL import Image
+from PIL import Image, ImageFilter
 import Numeric as num
 import pygame
 
-surf = pygame.display.set_mode((800,400), pygame.DOUBLEBUF, 32)
-clk = pygame.time.Clock()
-pygame.font.init()
-font = pygame.font.SysFont("trebuchetms", 20)
+class SamplePoint(object):
+    """reads from two points in the image"""
+    def __init__(self, img):
+        """pil image"""
+        self.img = img
 
-leds = 10
+    def setPos(self, x1, y1, s1, x2, y2, s2):
+        """0..1 normalized coords"""
+        self.pos1 = (x1, y1, s1)
+        self.pos2 = (x2, y2, s2)
 
-img = Image.open(sys.argv[1])
-img = img.resize((img.size[0], leds), Image.ANTIALIAS)
+    def sample(self):
+        """returns (r,g,b) in 0..255"""
+        def scaledCol(x, y):
+            col = self.img.getpixel((int((self.img.size[0] - 1) * x),
+                                     int((self.img.size[1] - 1) * y)))
+            return num.array(col, num.Float64)
+        ret = num.array([0,0,0], num.Float64)
+        if self.pos1[2] > .001:
+            ret += self.pos1[2] * scaledCol(self.pos1[0], self.pos1[1])
+        if self.pos2[2] > .001:
+            ret += self.pos2[2] * scaledCol(self.pos2[0], self.pos2[1])
+        return ret.astype(num.UnsignedInt8)
+    
+    def drawPreview(self, surf, offset, size):
+        def circ(pos, weight):
+            if weight < .001:
+                return
+            pygame.draw.circle(surf, (255, 255, 0),
+                               num.array(offset) + num.array(size) * pos,
+                               max(2, 6 * weight), 1)
 
-overlap = 50
-t = 0
-while 1:
-    pygame.event.pump()
-    clk.tick(30)
-    surf.fill((0,0,0))
+        circ(self.pos1[:2], self.pos1[2])
+        circ(self.pos2[:2], self.pos2[2])
 
-    for y in range(leds):
-        x = t % (img.size[0] - overlap)
-        col = img.getpixel((x, y))
-        if x < overlap:
-            blend = x / overlap
-            tailCol = img.getpixel((img.size[0] - overlap + x, y))
-            col = blend * num.array(col) + (1 - blend) * num.array(tailCol)
+def pilblur(img, hsize=10, vsize=10):
+    """big blur, via resizes"""
 
-        pygame.draw.rect(surf, col, (800 / leds * y, 5,
-                                     800 / leds * .8, 100))
+    origSize = img.size
+    img = img.resize((img.size[0] // hsize,
+                      img.size[1] // vsize), Image.ANTIALIAS)
+    
+    return img.resize(origSize, Image.ANTIALIAS)
 
-        surf.blit(font.render("t=%s width=%s" % (t, img.size[0]),
-                              True, (255, 255, 0)),
-                  (5, 380))
+def surfFromPIL(img):
+    return pygame.image.fromstring(img.tostring(),
+                                   img.size, "RGB")
+
+class StraightSweep(object):
+    def __init__(self, pts):
+        self.pts = pts
+        self.t = 0
+        self.overlap = .1
+        self.margin = .05 # top/bottom
+
+    # the sweep style should suggest a blur amount
         
-    t = t + 1
-    pygame.display.update()
+    def step(self):
+        margin, overlap = self.margin, self.overlap
+        
+        self.t += .003
+        for row, pt in enumerate(self.pts):
+            x = self.t % (1.0 - overlap)
+            y = margin + (row / (len(self.pts) - 1)) * (1 - 2 * margin)
+            blend = x / overlap
+            b1, b2 = 1, 0
+            if x < overlap:
+                b1 = blend
+                b2 = 1 - blend
+            pt.setPos(x, y, b1,
+                      1 - overlap + x, y, b2)
+
+def main():
+    surf = pygame.display.set_mode((800, 450), pygame.DOUBLEBUF, 32)
+    clk = pygame.time.Clock()
+    pygame.font.init()
+    font = pygame.font.SysFont("trebuchetms", 20)
+
+    leds = 50
+
+    imgOrig = Image.open(sys.argv[1])
+
+    blur = pilblur(imgOrig,
+                   1, 
+                   imgOrig.size[0] / leds
+                   )
+    
+    pts = [SamplePoint(blur) for _ in range(leds)]
+
+    previewClean = surfFromPIL(imgOrig.resize((300, 300)))
+    previewImg = surfFromPIL(blur.resize((300, 300)))
+
+    pattern = StraightSweep(pts)
+    while 1:
+        pygame.event.pump()
+        clk.tick(30)
+        surf.fill((0,0,0))
+
+        pattern.step()
+
+        for i, pt in enumerate(pts):
+            pygame.draw.rect(surf, pt.sample(),
+                             (800 / len(pts) * i, 5,
+                              800 / len(pts) * .8, 100))
+
+        surf.blit(previewClean, (50, 120))
+
+        surf.blit(previewImg, (400, 120))
+        for pt in pts:
+            pt.drawPreview(surf, offset=(50,120), size=(300,300))
+            pt.drawPreview(surf, offset=(400,120), size=(300,300))
+
+    #        surf.blit(font.render("t=%s width=%s" % (t, img.size[0]),
+    #                              True, (255, 255, 0)),
+    #                  (5, 380))
+
+        pygame.display.update()
+
+main()
