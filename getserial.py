@@ -1,11 +1,11 @@
 import serial
-def getSerial():
+def getSerial(baud=9600):
 
     ser = None
     ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
     for port in ports:
         try:
-            ser = serial.Serial(port=port, baudrate=9600, timeout=1,
+            ser = serial.Serial(port=port, baudrate=baud, timeout=1,
                                 xonxoff=0, rtscts=0)
             break
         except serial.serialutil.SerialException, e:

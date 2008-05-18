@@ -64,7 +64,7 @@ class StraightSweep(object):
     def step(self):
         margin, overlap = self.margin, self.overlap
         
-        self.t += .003
+        self.t += .001
         for row, pt in enumerate(self.pts):
             x = self.t % (1.0 - overlap)
             y = margin + (row / (len(self.pts) - 1)) * (1 - 2 * margin)
@@ -82,7 +82,7 @@ def main():
     pygame.font.init()
     font = pygame.font.SysFont("trebuchetms", 20)
 
-    leds = 50
+    leds = int(sys.argv[2])
 
     imgOrig = Image.open(sys.argv[1])
 
