@@ -3,9 +3,6 @@ from __future__ import division
 import time
 import getserial
 
-def writeColor(r, g, b):
-    ser.write(chr(r) + chr(g) + chr(b))
-
 ser = getserial.getSerial(115200)
 
 ## delay = .1
@@ -22,10 +19,11 @@ import Tkinter as tk
 root = tk.Tk()
 chans = dict(r=tk.IntVar(), g=tk.IntVar(), b=tk.IntVar())
 def update():
+    msg = ""
     for i in range(5):
-        writeColor(chans['r'].get() / (i**2+1),
-                   chans['g'].get() / (i**2+1),
-                   chans['b'].get() / (i**2+1))
+        msg += chr(chans['r'].get()) + chr(chans['g'].get()) + chr(chans['b'].get())
+    ser.write(msg)
+    print "write"
                    
 for chan in 'rgb':
     s = tk.Scale(root, label=chan,from_=255, to=0, showval=1,
