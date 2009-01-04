@@ -86,7 +86,7 @@ void setup() {
    PIXEL(4, 0, F, F);
    refresh(); 
 
-   Serial.begin(115200);
+   Serial.begin(9600);
    Serial.flush();
 }
 

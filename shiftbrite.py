@@ -13,7 +13,7 @@ import getserial
 
 class ShiftBriteOutput(object):
     def __init__(self):
-        self.ser = getserial.getSerial(115200)
+        self.ser = getserial.getSerial(9600)
         self.profile = None
 
     def setProfile(self, name):
