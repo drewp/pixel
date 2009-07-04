@@ -9,25 +9,31 @@ class Shiftbrite(object):
         self.port = parallel.Parallel(port=portNum)
         self.port.setData(0)
         self.sendCommandMode()
-        self.sendPacket(300, 200, 100)
+
+    def dataBit(self, x, i):
+        p = 0
+        if x:
+            p = (1 << dataPin)
+        self.port.setData(p)
+        self.port.setData(p | (1 << clockPin))
+
+    def latch(self):
+        self.port.setData(1 << latchPin)
+        self.port.setData(0)
+
 
     def sendPacket(self, r, g, b):
-        d = self.port.setData
-        d(0)
-        d(0 | (1 << clockPin))
-        d(0)
-        d(0 | (1 << clockPin))
-        for bit in range(10):
-            val = (r & (1<<bit)) and (1 << dataPin)
-            d(val)
-            d(val | (1 << clockPin))
-        # 15 micro sleep
-        d(1 << latchPin)
-        d(0)
+        self.dataBit(0, 0)
+        self.dataBit(0, 1)
+        for col in [r, g, b]:
+            col = max(0, min(1023, int(col)))
+            for bit in range(10):
+                self.dataBit(col & (1<<(9-bit)), '?')
+        self.latch()
 
     def sendCommandMode(self):
-        d = self.port.setData
-        for bit in [0, 1,
+        for i, bit in enumerate([
+                0, 1,
                     0, 0, 0,
                     1, 1, 1, 1, 1, 1, 1, # b correct
                     0, 0, 0,
@@ -35,14 +41,23 @@ class Shiftbrite(object):
                     0,
                     0, 0, # clock mode 00=internal
                     1, 1, 1, 1, 1, 1, 1, # r correct
-                    ]:
-            d(bit and dataPin)
-            d((bit and dataPin) | clockPin)
-        d(latchPin)
-        d(0)
+                    ]):
+            self.dataBit(bit, i)
+        self.latch()
 
 
-sb = Shiftbrite()
-sb.sendPacket(300, 200, 100)
-time.sleep(1)
-sb.sendPacket(0, 0, 0)
+if __name__ == '__main__':
+    from math import sin
+    sb = Shiftbrite()
+    try:
+        r = 500
+        while 1:
+            t = time.time()
+            sb.sendCommandMode()
+            sb.sendPacket(r + r * sin(t * .8), 
+                          r + r * sin(t * .6), 
+                          r + r * sin(t * .5))
+            time.sleep(.03)
+    finally:
+        sb.sendPacket(0, 0, 0)
+
