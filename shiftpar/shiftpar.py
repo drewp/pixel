@@ -1,50 +1,65 @@
+from __future__ import division
 import parallel, time
 
-dataPin = 0
-clockPin = 2
-latchPin = 3
-
 class Shiftbrite(object):
-    def __init__(self, portNum=0):
+    """
+    Communicate to ShiftBrite or MegaBrite units over a parallel port. 
+
+    On linux, you may need to 'rmmod lp' to be able to open the port.
+    """
+    def __init__(self, portNum=0, pins={'data' : 0, 'clock' : 2, 'latch' : 3}):
         self.port = parallel.Parallel(port=portNum)
         self.port.setData(0)
-        self.sendCommandMode()
-
-    def dataBit(self, x, i):
-        p = 0
+        self._dataVal = 1 << pins['data']
+        self._clockVal = 1 << pins['clock']
+        self._latchVal = 1 << pins['latch']
+        
+    def _dataBit(self, x):
+        out = 0
         if x:
-            p = (1 << dataPin)
-        self.port.setData(p)
-        self.port.setData(p | (1 << clockPin))
+            out = self._dataVal
+        self.port.setData(out)
+        self.port.setData(out | self._clockVal)
 
-    def latch(self):
-        self.port.setData(1 << latchPin)
-        self.port.setData(0)
+    def _latch(self):
+        self.port.setData(self._latchVal)
 
+    def sendColors(self, rgbs):
+        """set colors of shiftbrites down the chain. 
+        Pass a list of [(r1,g1,b1), (r2, g2, b2), ...]
+        Values are 0..1023.
+        
+        See http://docs.macetech.com/doku.php/megabrite
+        """
+        for rgb in rgbs:
+            self._dataBit(0)
+            self._dataBit(0)
+            for col in rgb:
+                col = max(0, min(1023, int(col)))
+                for bit in range(10):
+                    self._dataBit(col & (1<<(9-bit)))
+        self._latch()
 
-    def sendPacket(self, r, g, b):
-        self.dataBit(0, 0)
-        self.dataBit(0, 1)
-        for col in [r, g, b]:
-            col = max(0, min(1023, int(col)))
-            for bit in range(10):
-                self.dataBit(col & (1<<(9-bit)), '?')
-        self.latch()
-
-    def sendCommandMode(self):
-        for i, bit in enumerate([
-                0, 1,
+    def setModes(self, numUnits=1):
+        """set mode and calibration for numUnits shiftbrites. Call
+        this anytime your units might have gotten random noise and
+        changed modes, perhaps just before each color command.
+        
+        See http://docs.macetech.com/doku.php/megabrite
+        """
+        for loop in range(numUnits):
+            for i, bit in enumerate([
+                    0, 1,
                     0, 0, 0,
-                    1, 1, 1, 1, 1, 1, 1, # b correct
+                    1, 1, 1, 1, 1, 1, 1, # b correction
                     0, 0, 0,
-                    1, 1, 1, 1, 1, 1, 1, # g correct
+                    1, 1, 1, 1, 1, 1, 1, # g correction
                     0,
                     0, 0, # clock mode 00=internal
-                    1, 1, 1, 1, 1, 1, 1, # r correct
+                    1, 1, 1, 1, 1, 1, 1, # r correction
                     ]):
-            self.dataBit(bit, i)
-        self.latch()
-
+                self._dataBit(bit)
+        self._latch()
 
 if __name__ == '__main__':
     from math import sin
@@ -53,10 +68,10 @@ if __name__ == '__main__':
         r = 500
         while 1:
             t = time.time()
-            sb.sendCommandMode()
-            sb.sendPacket(r + r * sin(t * .8), 
-                          r + r * sin(t * .6), 
-                          r + r * sin(t * .5))
+            sb.setModes(1)
+            sb.sendColors([(r + r * sin(t * .8), 
+                            r + r * sin(t * .6), 
+                            r + r * sin(t * .5))])
             time.sleep(.03)
     finally:
         sb.sendPacket(0, 0, 0)
