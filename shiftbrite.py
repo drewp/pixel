@@ -9,6 +9,7 @@ import from python to use ShiftBriteOutput class
 
 from __future__ import division
 import sys
+sys.path.append(".")
 import getserial
 
 class ShiftBriteOutput(object):
@@ -27,7 +28,7 @@ class ShiftBriteOutput(object):
         for r, g, b in levels:
             if self.profile is not None:
                 r, g, b = self.profile(r, g, b)
-            msg += chr(r) + chr(g) + chr(b)
+            msg += chr(int(r)) + chr(int(g)) + chr(int(b))
         self.ser.write("\xff" + msg.replace("\xff", "\xfe"))
 
 class Profile(object):
@@ -37,6 +38,7 @@ class Profile(object):
         return r, int(g * 183 / 255), int(b * 45 / 255)
     # gamma up
     # something that's mostly accurate, but lets blues go really bright
+
 
 def xmlrpcServer(port=9002):
     """expose the ShiftBriteOutput.send method via xmlrpc. Example
@@ -48,16 +50,39 @@ def xmlrpcServer(port=9002):
     serv.send([g, g, g, g, g])
     """
     from twisted.internet import reactor
-    from twisted.web import xmlrpc, server
-    from twisted.python import log
-    log.startLogging(sys.stdout)
+    from twisted.web import xmlrpc, server, http
+    from twisted.web.resource import Resource
+
+    #from twisted.python import log
+    #log.startLogging(sys.stdout)
     out = ShiftBriteOutput()
+
+    class Root(Resource):
+
+        def render_POST(self, request):
+            # see http://twistedmatrix.com/projects/web/documentation/howto/using-twistedweb.html#rendering
+            if request.path == '/':
+                if 'query' not in request.args:
+                    return self.stats.statusPage()
+                return self.getQuery(request)
+
+            if request.path == '/save':
+                return self.getSave(request)
+
+            request.setResponseCode(http.BAD_REQUEST)
+            return "<html>Invalid request: this is a sparql query server</html>"
+
     class XMLRPCServe(xmlrpc.XMLRPC):
         def xmlrpc_send(self, levels):
             out.send(levels)
             return "ok"
-    reactor.listenTCP(port, server.Site(XMLRPCServe()))
+
+    root = Root()
+    root.putChild('/RPC2', XMLRPCServe)
+        
+    reactor.listenTCP(port, server.Site(root))
     reactor.run()
+
 
 def tkSliders(nleds=5):
     """Present r/g/b sliders that set the color of all leds. runs a tk
