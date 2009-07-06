@@ -1,14 +1,29 @@
 from __future__ import division
 import parallel, time
 
+class DummyPort(object):
+    def setData(self, d):
+        pass
+
 class Shiftbrite(object):
     """
     Communicate to ShiftBrite or MegaBrite units over a parallel port. 
 
     On linux, you may need to 'rmmod lp' to be able to open the port.
     """
-    def __init__(self, portNum=0, pins={'data' : 0, 'clock' : 2, 'latch' : 3}):
-        self.port = parallel.Parallel(port=portNum)
+    def __init__(self, portNum=0, pins={'data' : 0, 'clock' : 2, 'latch' : 3},
+                 dummyModeOk=False):
+        """
+        If dummyModeOk is set, a failure to open the parallel port
+        will be ignored, and further output commands will have no
+        effect. This might be useful for testing.
+        """
+        try:
+            self.port = parallel.Parallel(port=portNum)
+        except (OSError, AttributeError):
+            if not dummyModeOk:
+                raise
+            self.port = DummyPort()
         self.port.setData(0)
         self._dataVal = 1 << pins['data']
         self._clockVal = 1 << pins['clock']
@@ -34,7 +49,7 @@ class Shiftbrite(object):
         for rgb in rgbs:
             self._dataBit(0)
             self._dataBit(0)
-            for col in rgb:
+            for col in rgb: # color order is wrong
                 col = max(0, min(1023, int(col)))
                 for bit in range(10):
                     self._dataBit(col & (1<<(9-bit)))
