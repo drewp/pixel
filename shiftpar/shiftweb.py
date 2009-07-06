@@ -5,15 +5,18 @@ import sys
 from twisted.internet import reactor
 from twisted.web import server, http
 from twisted.python import log
-from nevow import rend, inevow, loaders, appserver
+from nevow import rend, inevow, loaders, appserver, static
 from shiftpar import Shiftbrite
 
-from webcolors import hex_to_rgb
+from webcolors import hex_to_rgb, rgb_to_hex
 
 def rgbFromHex(h):
     """returns tuple of 0..1023"""
     norm = hex_to_rgb(h)
     return tuple([x * 4 for x in norm])
+
+def hexFromRgb(rgb):
+    return rgb_to_hex(tuple([x // 4 for x in rgb]))
 
 class Root(rend.Page):
     docFactory = loaders.xmlfile("shiftweb.html")
@@ -24,6 +27,9 @@ class Root(rend.Page):
         channel"""
         self.colors = colors
         self.update = update
+
+    def child_static(self, ctx):
+        return static.File("static")
 
     def child_color(self, ctx):
         """support for
@@ -36,6 +42,8 @@ class Root(rend.Page):
             self.colors[channel] = rgbFromHex(ctx.arg('color'))
             self.update()
             return "updated %r" % self.colors
+        elif request.method == 'GET':
+            return hexFromRgb(self.colors[int(ctx.arg('channel'))])
         raise NotImplementedError
     
 sb = Shiftbrite(dummyModeOk=True)
