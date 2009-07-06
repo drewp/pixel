@@ -49,7 +49,7 @@ class Shiftbrite(object):
         for rgb in rgbs:
             self._dataBit(0)
             self._dataBit(0)
-            for col in rgb: # color order is wrong
+            for col in rgb[2], rgb[0], rgb[1]:
                 col = max(0, min(1023, int(col)))
                 for bit in range(10):
                     self._dataBit(col & (1<<(9-bit)))
