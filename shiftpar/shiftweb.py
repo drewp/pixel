@@ -1,11 +1,19 @@
 """
 http interface to a ShiftBrite/MegaBrite
 """
+import sys
 from twisted.internet import reactor
-from twisted.web import xmlrpc, server, http
-from twisted.web.resource import Resource
-
+from twisted.web import server, http
+from twisted.python import log
+from nevow import rend, inevow, loaders, appserver
 from shiftpar import Shiftbrite
+
+from webcolors import hex_to_rgb
+
+def rgbFromHex(h):
+    """returns tuple of 0..1023"""
+    norm = hex_to_rgb(h)
+    return tuple([x * 4 for x in norm])
 
 class Root(rend.Page):
     docFactory = loaders.xmlfile("shiftweb.html")
@@ -15,29 +23,32 @@ class Root(rend.Page):
         colors list, and call update() when it has changed a
         channel"""
         self.colors = colors
-        self.update = upadte
+        self.update = update
 
     def child_color(self, ctx):
         """support for
               GET /color?channel=0
            and
-              POST /color?channel=0&value=#ffe060"""
+              POST /color?channel=0&color=#ffe060"""
         request = inevow.IRequest(ctx)
-        if request.method == 'post':
+        if request.method == 'POST':
             channel = int(ctx.arg('channel'))
-            value = ctx.arg('value')
-            self.colors[channel] = value
+            self.colors[channel] = rgbFromHex(ctx.arg('color'))
             self.update()
-        if
-
-
-
-sb = Shiftbrite()
-colors = [(0, 0, 0)]
+            return "updated %r" % self.colors
+        raise NotImplementedError
+    
+sb = Shiftbrite(dummyModeOk=True)
+colors = [(0, 0, 0)] # length of this list controls how many channels we're addressing
 
 def update():
-    sb.setModes(1)
-    sb.setColors(colors)
+    sb.setModes(len(colors))
+    sb.sendColors(colors)
+
+log.startLogging(sys.stdout)
+
+# also make a looping task that calls update() to correct noise errors
+# in the LED
 
 root = Root(colors, update)
 reactor.listenTCP(9014, appserver.NevowSite(root))

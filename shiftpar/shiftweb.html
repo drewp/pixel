@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:n="http://nevow.com/ns/nevow/0.1">
+  <head>
+    <title>shiftweb</title>
+    <link rel="stylesheet" href="http://colourlovers.com.s3.amazonaws.com/COLOURloversColorPicker/COLOURloversColorPicker.css" type="text/css" media="all" />
+    <script type="text/JavaScript" src="http://colourlovers.com.s3.amazonaws.com/COLOURloversColorPicker/js/COLOURloversColorPicker.js"></script>
+    jquery
+  </head>
+  <body>
+    <form method="POST" action="color">
+      Channel: <input type="text" name="channel" value="0"/>
+      Color: <input type="text" name="color" value="#ffffff"/>
+      <input type="submit" value="Post color"/>
+    </form>
+
+
+    <div id="CLCP" class="CLCP"></div>
+    <script type="text/JavaScript">
+      _whichField = "hexValue_0";
+CLCPHandler = function(_hex) {
+    // This function gets called by the picker when the sliders are being dragged. The variable _hex contains the current hex value from the picker
+    // This code serves as an example only, here we use it to do three things:
+    // Here we simply drop the variable _hex into the input field, so we can see what the hex value coming from the picker is:
+    document.getElementById(_whichField).value = _hex;
+    // Here is where we color the BG of a div to preview the color:
+    document.getElementById("CLCPUpdateDiv").style.background = ("#" + _hex);
+    // Giving you control over this function really puts the reigns in your hands. Rewrite this function as you see fit to really take control of this color picker.
+    // need throttling?
+    $.ajax('color', {channel: '0', color: ('#' + _hex)}, 'POST');
+}
+// Settings:
+_CLCPdisplay = "none"; // Values: "none", "block". Default "none"
+_CLCPisDraggable = true; // Values: true, false. Default true
+_CLCPposition = "absolute"; // Values: "absolute", "relative". Default "absolute"
+_CLCPinitHex = "0039B3"; // Values: Any valid hex value. Default "ffffff"
+CLCPinitPicker();
+
+$.ajax('color', {channel: '0'}, 'GET').onSuccess(function(data) {
+    _CLCPinitHex = data.replace(/#/, '');
+});
+
+    </script>
+
+  </body>
+</html>
