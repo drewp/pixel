@@ -5,14 +5,14 @@ class DummyPort(object):
     def setData(self, d):
         pass
 
-class Shiftbrite(object):
+class ShiftbriteParallel(object):
     """
     Communicate to ShiftBrite or MegaBrite units over a parallel port. 
 
     On linux, you may need to 'rmmod lp' to be able to open the port.
     """
     def __init__(self, portNum=0, pins={'data' : 0, 'clock' : 2, 'latch' : 3},
-                 dummyModeOk=False):
+                 dummyModeOk=False, numChannels=1):
         """
         If dummyModeOk is set, a failure to open the parallel port
         will be ignored, and further output commands will have no
@@ -28,6 +28,7 @@ class Shiftbrite(object):
         self._dataVal = 1 << pins['data']
         self._clockVal = 1 << pins['clock']
         self._latchVal = 1 << pins['latch']
+        self.numChannels = numChannels
         
     def _dataBit(self, x):
         out = 0
@@ -55,14 +56,14 @@ class Shiftbrite(object):
                     self._dataBit(col & (1<<(9-bit)))
         self._latch()
 
-    def setModes(self, numUnits=1):
-        """set mode and calibration for numUnits shiftbrites. Call
+    def setModes(self, numChannels=1):
+        """set mode and calibration for numChannels shiftbrites. Call
         this anytime your units might have gotten random noise and
         changed modes, perhaps just before each color command.
         
         See http://docs.macetech.com/doku.php/megabrite
         """
-        for loop in range(numUnits):
+        for loop in range(numChannels):
             for i, bit in enumerate([
                     0, 1,
                     0, 0, 0,
@@ -76,9 +77,13 @@ class Shiftbrite(object):
                 self._dataBit(bit)
         self._latch()
 
+    def update(self, colors):
+        self.setModes(len(colors))
+        self.sendColors(colors)
+
 if __name__ == '__main__':
     from math import sin
-    sb = Shiftbrite()
+    sb = ShiftbriteParallel()
     try:
         r = 500
         while 1:

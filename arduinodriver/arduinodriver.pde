@@ -9,8 +9,12 @@ int SB_BlueCommand;
 int SB_RedCommand;
 int SB_GreenCommand;
 
-#define NLED 5
-int vals[NLED * 3];
+#define MAXCHANS 16
+int vals[MAXCHANS * 3];
+
+int addr = 0; // which vals element to set next
+int currentChans = MAXCHANS;
+
 
 void setCurrent(unsigned char r, unsigned char g, unsigned char b) { 
  /* 127 = max */ 
@@ -55,7 +59,7 @@ void latch() {
 void refresh() {
   /* send all pixels */
   SB_CommandMode = B00;
-  for (int pixel=0; pixel < NLED; pixel++) {
+  for (int pixel=0; pixel < currentChans; pixel++) {
     SB_RedCommand = vals[pixel * 3 + 0];
     SB_GreenCommand = vals[pixel * 3 + 1];
     SB_BlueCommand = vals[pixel * 3 + 2];
@@ -75,7 +79,7 @@ void setup() {
    digitalWrite(latchpin, LOW);
    digitalWrite(enablepin, LOW);
 
-   for (int i=0; i < NLED; i++) {
+   for (int i=0; i < MAXCHANS; i++) {
      setCurrent(127, 127, 127);
    }
 
@@ -90,13 +94,12 @@ void setup() {
    Serial.flush();
 }
 
-int quiet = 0;
-int addr = 0; // which vals element to set next
 
 void loop() {
   /*
-    send 0xff, then nled*3 bytes of r-g-b levels from 0x00-0xfe.
-    Computer should be able to ask how many LEDs we're setup for.
+    send 0xff, 
+    then a byte for the number of channels you're going to send,
+    then nchans*3 bytes of r-g-b levels from 0x00-0xfe.
    */
   int inb = Serial.read();
   if (inb == -1) {
@@ -104,13 +107,18 @@ void loop() {
   }
 
   if (inb == 0xff) {
-    addr = 0;
+    addr = -1;
     return;
   }
-
+  if (addr == -1) {
+    currentChans = inb;
+    addr = 0;
+    return; 
+  }
+  
   vals[addr] = inb * 4; // SB levels are 10-bit. log scale might be better
   addr ++; 
-  if (addr >= NLED * 3) {
+  if (addr >= currentChans * 3) {
     refresh();  
     addr = 0;
   }

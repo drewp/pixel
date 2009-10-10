@@ -2,11 +2,13 @@
 http interface to a ShiftBrite/MegaBrite
 """
 import sys
+from optparse import OptionParser
 from twisted.internet import reactor
 from twisted.web import server, http
 from twisted.python import log
 from nevow import rend, inevow, loaders, appserver, static
-from shiftpar import Shiftbrite
+from drvparallel import ShiftbriteParallel
+from drvarduino import ShiftbriteArduino
 
 from webcolors import hex_to_rgb, rgb_to_hex
 
@@ -21,12 +23,12 @@ def hexFromRgb(rgb):
 class Root(rend.Page):
     docFactory = loaders.xmlfile("shiftweb.html")
 
-    def __init__(self, colors, update):
+    def __init__(self, shiftbrite):
         """this object will read and write (r,g,b) triplets from the
         colors list, and call update() when it has changed a
         channel"""
-        self.colors = colors
-        self.update = update
+        self.colors = [(0,0,0)] * shiftbrite.numChannels
+        self.shiftbrite = shiftbrite
 
     def child_static(self, ctx):
         return static.File("static")
@@ -40,24 +42,32 @@ class Root(rend.Page):
         if request.method == 'POST':
             channel = int(ctx.arg('channel'))
             self.colors[channel] = rgbFromHex(ctx.arg('color'))
-            self.update()
+            self.shiftbrite.update(self.colors)
             return "updated %r" % self.colors
         elif request.method == 'GET':
             return hexFromRgb(self.colors[int(ctx.arg('channel'))])
         raise NotImplementedError
+
     
-sb = Shiftbrite(dummyModeOk=True)
-colors = [(0, 0, 0)] # length of this list controls how many channels we're addressing
-
-def update():
-    sb.setModes(len(colors))
-    sb.sendColors(colors)
-
 log.startLogging(sys.stdout)
+
+parser = OptionParser()
+parser.add_option("--parallel", action="store_true",
+                  help="use parallel port")
+parser.add_option("--arduino", action="store_true",
+                  help="talk to an arduino over usb")
+opts, args = parser.parse_args()
+
+if opts.parallel:
+    sb = ShiftbriteParallel(dummyModeOk=True, numChannels=1)
+elif opts.arduino:
+    sb = ShiftbriteArduino(numChannels=2)
+else:
+    raise ValueError("pick an output mode")
 
 # also make a looping task that calls update() to correct noise errors
 # in the LED
 
-root = Root(colors, update)
+root = Root(sb)
 reactor.listenTCP(9014, appserver.NevowSite(root))
 reactor.run()
