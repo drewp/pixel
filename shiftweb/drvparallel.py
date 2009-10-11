@@ -78,7 +78,7 @@ class ShiftbriteParallel(object):
         self._latch()
 
     def update(self, colors):
-        self.setModes(len(colors))
+        self.setModes(self.numChannels)
         self.sendColors(colors)
 
 if __name__ == '__main__':

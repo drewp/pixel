@@ -4,7 +4,6 @@ http interface to a ShiftBrite/MegaBrite
 import sys
 from optparse import OptionParser
 from twisted.internet import reactor
-from twisted.web import server, http
 from twisted.python import log
 from nevow import rend, inevow, loaders, appserver, static
 from drvparallel import ShiftbriteParallel
@@ -48,26 +47,31 @@ class Root(rend.Page):
             return hexFromRgb(self.colors[int(ctx.arg('channel'))])
         raise NotImplementedError
 
-    
-log.startLogging(sys.stdout)
 
-parser = OptionParser()
-parser.add_option("--parallel", action="store_true",
-                  help="use parallel port")
-parser.add_option("--arduino", action="store_true",
-                  help="talk to an arduino over usb")
-opts, args = parser.parse_args()
+def main():
 
-if opts.parallel:
-    sb = ShiftbriteParallel(dummyModeOk=True, numChannels=1)
-elif opts.arduino:
-    sb = ShiftbriteArduino(numChannels=2)
-else:
-    raise ValueError("pick an output mode")
+    parser = OptionParser()
+    parser.add_option("--parallel", action="store_true",
+                      help="use parallel port")
+    parser.add_option("--arduino", action="store_true",
+                      help="talk to an arduino over usb")
+    opts, args = parser.parse_args()
 
-# also make a looping task that calls update() to correct noise errors
-# in the LED
+    #log.startLogging(sys.stdout)
 
-root = Root(sb)
-reactor.listenTCP(9014, appserver.NevowSite(root))
-reactor.run()
+    if opts.parallel:
+        sb = ShiftbriteParallel(dummyModeOk=True, numChannels=1)
+    elif opts.arduino:
+        sb = ShiftbriteArduino(numChannels=2)
+    else:
+        raise ValueError("pick an output mode")
+
+    # also make a looping task that calls update() to correct noise errors
+    # in the LED
+
+    root = Root(sb)
+    reactor.listenTCP(9014, appserver.NevowSite(root))
+    reactor.run()
+
+if __name__ == '__main__':
+    main()

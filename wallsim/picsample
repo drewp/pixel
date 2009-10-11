@@ -1,10 +1,11 @@
+#!/usr/bin/python
 from __future__ import division
 import sys
 from PIL import Image, ImageFilter
 import Numeric as num
 import pygame
-sys.path.append("..")
-from shiftbrite import ShiftBriteOutput
+sys.path.append("../shiftweb")
+from multiclient import setColor8
 
 class SamplePoint(object):
     """reads from two points in the image"""
@@ -66,7 +67,7 @@ class StraightSweep(object):
     def step(self):
         margin, overlap = self.margin, self.overlap
         
-        self.t += .002
+        self.t += .001
         for row, pt in enumerate(self.pts):
             x = self.t % (1.0 - overlap)
             y = margin + (row / (len(self.pts) - 1)) * (1 - 2 * margin)
@@ -98,9 +99,6 @@ def main():
     previewClean = surfFromPIL(imgOrig.resize((300, 300)))
     previewImg = surfFromPIL(blur.resize((300, 300)))
 
-    out = ShiftBriteOutput()
-    out.setProfile('eyeball')
-
     pattern = StraightSweep(pts)
     while 1:
         pygame.event.pump()
@@ -115,7 +113,9 @@ def main():
             pygame.draw.rect(surf, pt.sample(),
                              (800 / len(pts) * i, 5,
                               800 / len(pts) * .8, 100))
-        out.send([pt.sample() for pt in pts])
+
+        for i, out in enumerate(['deskLeft', 'deskRight', 'bathroom']):
+            setColor8(out, pts[i].sample())
 
         surf.blit(previewClean, (50, 120))
 
