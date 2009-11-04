@@ -1,13 +1,15 @@
 """
 http interface to a ShiftBrite/MegaBrite
 """
-import sys
+import sys, logging
 from optparse import OptionParser
 from twisted.internet import reactor
 from twisted.python import log
 from nevow import rend, inevow, loaders, appserver, static
 from drvparallel import ShiftbriteParallel
 from drvarduino import ShiftbriteArduino
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger()
 
 from webcolors import hex_to_rgb, rgb_to_hex
 
@@ -46,6 +48,14 @@ class Root(rend.Page):
         elif request.method == 'GET':
             return hexFromRgb(self.colors[int(ctx.arg('channel'))])
         raise NotImplementedError
+
+    def child_otherBit(self, ctx):
+        request = inevow.IRequest(ctx)
+        if request.method == 'POST':
+            bit = int(ctx.arg('bit'))
+            self.shiftbrite.pulseOtherBit(bit)
+            return "ok"
+            
 
 
 def main():

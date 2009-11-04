@@ -1,5 +1,6 @@
 from __future__ import division
-import parallel, time
+import parallel, time, logging
+log = logging.getLogger()
 
 class DummyPort(object):
     def setData(self, d):
@@ -80,6 +81,22 @@ class ShiftbriteParallel(object):
     def update(self, colors):
         self.setModes(self.numChannels)
         self.sendColors(colors)
+
+    def pulseOtherBit(self, bit, seconds=2):
+        """
+        bit is 0..7 Seconds is turned up because I have a LP filter on
+        my output pin.
+
+        I was getting an unwanted pulse when the computer turned on, so I
+        added an RC delay that needs about 2 seconds to trigger.
+ 
+        """
+        log.info("pulsing bit %s" % bit)
+        try:
+            self.port.setData(1 << bit)
+            time.sleep(seconds)
+        finally:
+            self.port.setData(0)
 
 if __name__ == '__main__':
     from math import sin
