@@ -51,11 +51,15 @@ def getPilImage(targetwindow, origin_x, origin_y, width=1, height=1):
 mydisplay = display.Display()
 root = mydisplay.screen().root
 
+lastSent = {} # chan : color
 while True:
     for chan, xoff in [('deskLeft', 0), ('deskRight', 1050)]:
         #t1 = time.time()
         img = getPilImage(root, xoff, 0, 1050, 50)
         #print time.time() - t1
         mean = ImageStat.Stat(img).mean
-        setColor8(chan, map(int, mean))
+        color = map(int, mean)
+        if lastSent.get(chan, None) != color:
+            setColor8(chan, color)
+            lastSent[chan] = color
     time.sleep(.05)
