@@ -55,7 +55,15 @@ class Root(rend.Page):
             bit = int(ctx.arg('bit'))
             self.shiftbrite.pulseOtherBit(bit)
             return "ok"
-            
+
+    def child_videoInput(self, ctx):
+        """POST input={0..3}"""
+        request = inevow.IRequest(ctx)
+        if request.method == 'POST':
+            i = int(ctx.arg('input'))
+            self.shiftbrite.setOtherBit(4, i % 2)
+            self.shiftbrite.setOtherBit(5, i // 2)
+            return "ok"       
 
 
 def main():
