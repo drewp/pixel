@@ -73,12 +73,14 @@ def main():
                       help="use parallel port")
     parser.add_option("--arduino", action="store_true",
                       help="talk to an arduino over usb")
+    parser.add_option("--failok", action="store_true",
+                      help="if the parport can't be opened, start anyway")
     opts, args = parser.parse_args()
 
     #log.startLogging(sys.stdout)
 
     if opts.parallel:
-        sb = ShiftbriteParallel(dummyModeOk=True, numChannels=1)
+        sb = ShiftbriteParallel(dummyModeOk=opts.failok, numChannels=1)
     elif opts.arduino:
         sb = ShiftbriteArduino(numChannels=2)
     else:
