@@ -30,16 +30,21 @@ class ShiftbriteParallel(object):
         self._clockVal = 1 << pins['clock']
         self._latchVal = 1 << pins['latch']
         self.numChannels = numChannels
+        self.otherBits = 0  # always sent to the port
+
+    def _out(self, byte):
+        """mixes in otherBits and writes to parport"""
+        self.port.setData(byte | self.otherBits)
         
     def _dataBit(self, x):
         out = 0
         if x:
             out = self._dataVal
-        self.port.setData(out)
-        self.port.setData(out | self._clockVal)
+        self._out(out)
+        self._out(out | self._clockVal)
 
     def _latch(self):
-        self.port.setData(self._latchVal)
+        self._out(self._latchVal)
 
     def sendColors(self, rgbs):
         """set colors of shiftbrites down the chain. 
@@ -93,10 +98,17 @@ class ShiftbriteParallel(object):
         """
         log.info("pulsing bit %s" % bit)
         try:
-            self.port.setData(1 << bit)
+            self.setOtherBit(bit, 1)
             time.sleep(seconds)
         finally:
-            self.port.setData(0)
+            self.setOtherBit(bit, 0)
+
+    def setOtherBit(self, bit, value):
+        if value:
+            self.otherBits |= 1<<bit
+        else:
+            self.otherBits &= ~(1<<bit)
+        self._out(0)
 
 if __name__ == '__main__':
     from math import sin
