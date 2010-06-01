@@ -2,7 +2,7 @@
 send updates to shiftweb servers across multiple machines
 """
 import logging
-from restkit import Resource, RequestError
+from restkit import Resource, RequestError, RequestFailed
 from shiftweb import hexFromRgb
 log = logging.getLogger()
 
@@ -13,6 +13,7 @@ def setColor8(lightName, rgb):
 server = {
     'dash' : Resource('http://dash:9014/'),
     'slash' : Resource('http://slash:9014/'),
+    'score' : Resource('http://score:9014/'),
     }
 def setColor(lightName, rgb):
     """takes 10-bit r,g,b
@@ -23,10 +24,13 @@ def setColor(lightName, rgb):
         'deskLeft' : (server['dash'], 1),
         'deskRight' : (server['dash'], 0),
         'bathroom' : (server['slash'], 0),
+        'ari1' : (server['score'], 0),
+        'ari2' : (server['score'], 1),
+        'ari3' : (server['score'], 2),
         }[lightName]
     try:
         serv.post("color", channel=chan, color=hexFromRgb(rgb))
-    except RequestError, e:
+    except (RequestError, RequestFailed), e:
         log.warn(e)
         
 
