@@ -75,6 +75,7 @@ def main():
                       help="talk to an arduino over usb")
     parser.add_option("--failok", action="store_true",
                       help="if the parport can't be opened, start anyway")
+    parser.add_option("--channels", type="int", help="number of shiftbrites connected", default=2)
     opts, args = parser.parse_args()
 
     #log.startLogging(sys.stdout)
@@ -82,7 +83,7 @@ def main():
     if opts.parallel:
         sb = ShiftbriteParallel(dummyModeOk=opts.failok, numChannels=1)
     elif opts.arduino:
-        sb = ShiftbriteArduino(numChannels=2)
+        sb = ShiftbriteArduino(numChannels=opts.channels)
     else:
         raise ValueError("pick an output mode")
 
