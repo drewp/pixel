@@ -1,3 +1,9 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+OneWire oneWire(3); // digital IO 3
+DallasTemperature sensors(&oneWire);
+
 int datapin  = 10; // DI
 int latchpin = 11; // LI
 int enablepin = 12; // EI
@@ -14,7 +20,7 @@ int vals[MAXCHANS * 3];
 
 int addr = 0; // which vals element to set next
 int currentChans = MAXCHANS;
-
+DeviceAddress tempSensorAddress;
 
 void setCurrent(unsigned char r, unsigned char g, unsigned char b) { 
  /* 127 = max */ 
@@ -90,6 +96,10 @@ void setup() {
    PIXEL(4, 0, F, F);
    refresh(); 
 
+   sensors.begin();
+   sensors.getAddress(tempSensorAddress, 0);
+   sensors.setResolution(tempSensorAddress, 12);
+
    Serial.begin(9600);
    Serial.flush();
 }
@@ -100,6 +110,8 @@ void loop() {
     send 0xff, 
     then a byte for the number of channels you're going to send,
     then nchans*3 bytes of r-g-b levels from 0x00-0xfe.
+
+    second byte 0xfe means to return temp in F, followed by \n
    */
   int inb = Serial.read();
   if (inb == -1) {
@@ -111,6 +123,14 @@ void loop() {
     return;
   }
   if (addr == -1) {
+    if (inb == 0xfe) {
+      sensors.requestTemperatures();
+      float tempF = sensors.getTempF(tempSensorAddress);
+      Serial.print(tempF);
+      Serial.print("\n");
+      addr = -1;
+      return;
+    }
     currentChans = inb;
     addr = 0;
     return; 

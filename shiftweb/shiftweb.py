@@ -1,7 +1,7 @@
 """
 http interface to a ShiftBrite/MegaBrite
 """
-import sys, logging
+import sys, logging, jsonlib
 from optparse import OptionParser
 from twisted.internet import reactor
 from twisted.python import log
@@ -63,7 +63,11 @@ class Root(rend.Page):
             i = int(ctx.arg('input'))
             self.shiftbrite.setOtherBit(4, i % 2)
             self.shiftbrite.setOtherBit(5, i // 2)
-            return "ok"       
+            return "ok"
+
+    def child_temperature(self, ctx):
+        inevow.IRequest(ctx).setHeader("Content-type", "application/json")
+        return jsonlib.write({"temp" : self.shiftbrite.getTemperature()})
 
 
 def main():

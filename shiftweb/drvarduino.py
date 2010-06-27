@@ -17,7 +17,7 @@ class ShiftbriteArduino(object):
         self.ser = getserial.getSerial(9600)
         self.profile = None
         self.numChannels = numChannels
-
+        
     def setProfile(self, name):
         """apply some named transfer function on levels before they're
         output"""
@@ -33,6 +33,14 @@ class ShiftbriteArduino(object):
             msg += chr(int(r)) + chr(int(g)) + chr(int(b))
         self.ser.write("\xff" + chr(self.numChannels) +
                        msg.replace("\xff", "\xfe"))
+
+    def getTemperature(self):
+        self.ser.write("\xff\xfe")
+        f = float(self.ser.readline())
+        if f > 184 or f < -100:
+            raise ValueError("out of range temp value (%s)" % f)
+        return f
+        
 
 class Profile(object):
     @staticmethod

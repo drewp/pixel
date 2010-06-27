@@ -43,6 +43,15 @@
 	  });
 	  
 	  $.get('color', {channel: '0'}, picker.setColor);
+
+	  function updateTemperature() {
+	      $.getJSON('temperature', {}, function (data, status) {
+		  $("#temperature").text(data.temp);
+	      });
+	      setTimeout(updateTemperature, 1000);
+	  }
+	  updateTemperature();
+
       });
     </script>
     
@@ -62,6 +71,8 @@
 	<div><input type="submit" value="Post color"/></div>
       </form>
     </div>
+
+    <div>Current temperature: <span id="temperature"/></div>
 
   </body>
 </html>
