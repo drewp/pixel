@@ -114,17 +114,46 @@ xmas_color_hue(uint8_t h) {
 void setup() {  
   pinMode(PIN_F0, OUTPUT);  
   pinMode(PIN_F1, OUTPUT);  
-  pinMode(STATUSPIN, OUTPUT);  
-  xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLACK); //Enumerate all the lights  
-  xmas_fill_color(PIN_F1, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLACK); //Enumerate all the lights  
 
-  xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLUE);
+  pinMode(STATUSPIN, OUTPUT);  
+
+  xmas_fill_color(PIN_F1, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLACK); //Enumerate all the lights  
+  delay(10);
+  xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLACK); //Enumerate all the lights  
+  delay(10);
+
   xmas_fill_color(PIN_F1, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_RED);
+  xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLUE);
+  delay(500);
 }  
  
 void loop() {  
   digitalWrite(STATUSPIN,1);  
-  xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_RED);  
+  
+  int i;
+
+  while(1) {
+    for (i=0; i<50; i++) {
+      xmas_set_color(PIN_F0, i, XMAS_DEFAULT_INTENSITY, XMAS_COLOR_WHITE);
+      xmas_set_color(PIN_F1, i, XMAS_DEFAULT_INTENSITY, XMAS_COLOR_WHITE);
+      delay(150);
+      xmas_set_color(PIN_F0, i, XMAS_DEFAULT_INTENSITY, XMAS_COLOR_BLACK);
+      xmas_set_color(PIN_F1, i, XMAS_DEFAULT_INTENSITY, XMAS_COLOR_BLACK);
+    }
+  }
+
+
+  while (1) {
+  for (i=0; i<XMAS_DEFAULT_INTENSITY; i++) {
+    xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,i,XMAS_COLOR_WHITE);  
+    xmas_fill_color(PIN_F1, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY- i,XMAS_COLOR_WHITE);  
+  }
+  for (i=XMAS_DEFAULT_INTENSITY-1; i>=0 ;i--) {
+    xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,i,XMAS_COLOR_WHITE);  
+    xmas_fill_color(PIN_F1, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY- i,XMAS_COLOR_WHITE);  
+  }
+  }
+
   delay(100);  
   digitalWrite(STATUSPIN,0);  
   xmas_fill_color(PIN_F0, 0,XMAS_LIGHT_COUNT,XMAS_DEFAULT_INTENSITY,XMAS_COLOR_BLUE);  
