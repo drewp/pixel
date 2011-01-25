@@ -1,4 +1,8 @@
 // GE Christmas light control for Arduino  
+
+// adjusted for multiple strings attached to teensy by drewp@bigasterisk.com
+
+
  // Ported by Scott Harris <scottrharris@gmail.com>  
  // scottrharris.blogspot.com  
    
@@ -67,9 +71,6 @@
   delayMicroseconds(40); // Can be made shorter  
  }  
    
-   
- // The rest of Robert's code is basically unchanged  
-   
 void xmas_fill_color(uint8_t pin, uint8_t begin,uint8_t count,uint8_t intensity,xmas_color_t color)  
  {  
       while(count--)  
@@ -117,7 +118,6 @@ void xmas_set_color(uint8_t pin, uint8_t led,uint8_t intensity,xmas_color_t colo
            case 5:     h-=80; return xmas_color(0,XMAS_CHANNEL_MAX,(XMAS_CHANNEL_MAX-h));  
       }  
  }  
-   
    
    
  void setup()  
