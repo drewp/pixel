@@ -34,6 +34,8 @@ class Board(object):
         colors is a list of tuples: (addr, intensity, r, g, b)
         intensity is 0..255, but 0xcc==204 is recommended.
         r,g,b are 0..15
+
+        This takes 10-44 ms to run, 44ms if you send 50 colors.
         """
         msg = [0x60, 0x1E, 0xD5, pin, len(colors)]
         for addr, intensity, r, g, b in colors:
