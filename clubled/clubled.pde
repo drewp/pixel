@@ -267,7 +267,7 @@ void loop() {
 	if (pos >= (5 + count * 4)) {
 	  digitalWrite(STATUSPIN, 0);
 	  Serial.print("ok");
-	  doSetColorsCommand(pin, count, cmd + 6);
+	  doSetColorsCommand(pin, count, cmd + 5);
 	  return;
 	}
 	debugSerial("s");
