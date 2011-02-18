@@ -46,6 +46,21 @@ Set colors command-- Set some colors on a string
   601ED5      21      3         [ 3        204           1234      ]     [...]
   header{24}  pin{8}  count{8}    addr{8}  intensity{8}  color{16}
 
+Same thing flipped:
+msg byte  meaning
+--------  --------
+0 	  magic
+1 	  magic
+2 	  magic
+3 	  pin
+4 	  count
+5 	  addr0 or ledcount
+6 	  int0
+7 	  color0.hi
+8 	  color0.lo
+9 	  addr1   
+...
+
 The longest message is 3+1+1+4*50 = 205 bytes, so you have to send
 more than that to reset.
 
