@@ -1,8 +1,3 @@
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
-OneWire oneWire(3); // digital IO 3
-DallasTemperature sensors(&oneWire);
 
 int datapin  = 10; // DI
 int latchpin = 11; // LI
@@ -20,17 +15,18 @@ int vals[MAXCHANS * 3];
 
 int addr = 0; // which vals element to set next
 int currentChans = MAXCHANS;
-DeviceAddress tempSensorAddress;
 
-void setCurrent(unsigned char r, unsigned char g, unsigned char b) { 
- /* 127 = max */ 
-   SB_CommandMode = B01; // Write to current control registers
-   SB_RedCommand = r; 
-   SB_GreenCommand = g;
-   SB_BlueCommand = b;
-   SB_SendPacket();
-   latch();
-}
+#define TEMP_ENABLED 0
+
+#ifdef TEMP_ENABLED
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+OneWire oneWire(3); // digital IO 3
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempSensorAddress;
+#endif
+
 
 void shiftOutLocal(uint8_t dataPin, uint8_t clockPin, byte val)
 {
@@ -76,6 +72,15 @@ void refresh() {
 #define F 1023
 #define PIXEL(i, r, g, b) { vals[i*3+0] = r; vals[i*3+1] = g; vals[i*3+2] = b; }
 
+void setCurrent(unsigned char r, unsigned char g, unsigned char b) { 
+ /* 127 = max */ 
+   SB_CommandMode = B01; // Write to current control registers
+   SB_RedCommand = r; 
+   SB_GreenCommand = g;
+   SB_BlueCommand = b;
+   SB_SendPacket();
+   latch();
+}
 void setup() {
    pinMode(datapin, OUTPUT);
    pinMode(latchpin, OUTPUT);
@@ -96,9 +101,11 @@ void setup() {
    PIXEL(4, 0, F, F);
    refresh(); 
 
+#ifdef TEMP_ENABLED
    sensors.begin();
    sensors.getAddress(tempSensorAddress, 0);
    sensors.setResolution(tempSensorAddress, 12);
+#endif
 
    Serial.begin(9600);
    Serial.flush();
@@ -124,10 +131,12 @@ void loop() {
   }
   if (addr == -1) {
     if (inb == 0xfe) {
+#ifdef TEMP_ENABLED
       sensors.requestTemperatures();
       float tempF = sensors.getTempF(tempSensorAddress);
       Serial.print(tempF);
       Serial.print("\n");
+#endif
       addr = -1;
       return;
     }
