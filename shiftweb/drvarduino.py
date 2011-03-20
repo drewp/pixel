@@ -9,14 +9,18 @@ import from python to use ShiftBriteOutput class
 
 from __future__ import division
 import sys
+from collections import namedtuple
 sys.path.append(".")
 import getserial
+
+Buttons = namedtuple('Buttons', 'blk yel grn red blu rot drot')
 
 class ShiftbriteArduino(object):
     def __init__(self, numChannels=1):
         self.ser = getserial.getSerial(9600)
         self.profile = None
         self.numChannels = numChannels
+        self.lastRotButton = None
         
     def setProfile(self, name):
         """apply some named transfer function on levels before they're
@@ -40,7 +44,23 @@ class ShiftbriteArduino(object):
         if f > 184 or f < -100:
             raise ValueError("out of range temp value (%s)" % f)
         return f
+
+    def getButtons(self):
+        self.ser.write("\xff\xfd")
+        line = self.ser.readline()
+        vals = map(int, line.strip().split())
+
+        if self.lastRotButton is None:
+            dr = 0
+        else:
+            dr = vals[5] - self.lastRotButton
+            if dr > 128:
+                dr -= 256
+            if dr < -128:
+                dr += 256
+        self.lastRotButton = vals[5]
         
+        return Buttons(*(vals + [dr]))
 
 class Profile(object):
     @staticmethod
