@@ -16,9 +16,12 @@ int vals[MAXCHANS * 3];
 int addr = 0; // which vals element to set next
 int currentChans = MAXCHANS;
 
+unsigned char rotation = 0; // position of knob
+unsigned char lastRotPosition = 0; // 2*A+1*B
+
 #define TEMP_ENABLED 0
 
-#ifdef TEMP_ENABLED
+#if TEMP_ENABLED
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
@@ -101,7 +104,7 @@ void setup() {
    PIXEL(4, 0, F, F);
    refresh(); 
 
-#ifdef TEMP_ENABLED
+#if TEMP_ENABLED
    sensors.begin();
    sensors.getAddress(tempSensorAddress, 0);
    sensors.setResolution(tempSensorAddress, 12);
@@ -109,8 +112,16 @@ void setup() {
 
    Serial.begin(9600);
    Serial.flush();
-}
 
+   pinMode(5, INPUT);
+   pinMode(6, INPUT);
+   pinMode(7, INPUT);
+   pinMode(8, INPUT);
+   pinMode(9, INPUT);
+   digitalWrite(6, HIGH); 
+   digitalWrite(8, HIGH); 
+   digitalWrite(9, HIGH); 
+}
 
 void loop() {
   /*
@@ -120,18 +131,31 @@ void loop() {
 
     second byte 0xfe means to return temp in F, followed by \n
    */
+
+  unsigned char curPos = (digitalRead(8) << 1) | digitalRead(9);
+
+  if (curPos == 0 && lastRotPosition == 2) { rotation--; }
+  if (curPos == 0 && lastRotPosition == 1) { rotation++; }
+  if (curPos == 1 && lastRotPosition == 0) { rotation--; }
+  if (curPos == 1 && lastRotPosition == 3) { rotation++; }
+  if (curPos == 3 && lastRotPosition == 1) { rotation--; }
+  if (curPos == 3 && lastRotPosition == 2) { rotation++; }
+  if (curPos == 2 && lastRotPosition == 3) { rotation--; }
+  if (curPos == 2 && lastRotPosition == 0) { rotation++; }
+
+  lastRotPosition = curPos;
+
   int inb = Serial.read();
   if (inb == -1) {
     return;
   }
-
   if (inb == 0xff) {
     addr = -1;
     return;
   }
   if (addr == -1) {
     if (inb == 0xfe) {
-#ifdef TEMP_ENABLED
+#if TEMP_ENABLED
       sensors.requestTemperatures();
       float tempF = sensors.getTempF(tempSensorAddress);
       Serial.print(tempF);
@@ -139,6 +163,22 @@ void loop() {
 #endif
       addr = -1;
       return;
+    }
+    if (inb == 0xfd) {
+      // read ariremote buttons, where some buttons are combined on
+      // the same pins
+      digitalWrite(5, HIGH); Serial.print(digitalRead(5));  
+      Serial.print(" ");
+      digitalWrite(5, LOW);  Serial.print(!digitalRead(5)); 
+      Serial.print(" ");
+      digitalWrite(7, HIGH); Serial.print(digitalRead(7));  
+      Serial.print(" ");
+      digitalWrite(7, LOW);  Serial.print(!digitalRead(7)); 
+      Serial.print(" ");
+      Serial.print(!digitalRead(6)); 
+      Serial.print(" ");
+      Serial.print((int)rotation);
+      Serial.print("\n");
     }
     currentChans = inb;
     addr = 0;
