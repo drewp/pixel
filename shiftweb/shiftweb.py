@@ -6,7 +6,11 @@ from optparse import OptionParser
 from twisted.internet import reactor
 from twisted.python import log
 from nevow import rend, inevow, loaders, appserver, static
-from drvparallel import ShiftbriteParallel
+from twisted.web import http
+try:
+    from drvparallel import ShiftbriteParallel
+except ImportError:
+    pass
 from drvarduino import ShiftbriteArduino
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
@@ -51,10 +55,24 @@ class Root(rend.Page):
 
     def child_otherBit(self, ctx):
         request = inevow.IRequest(ctx)
-        if request.method == 'POST':
+        if request.method == 'PUT':
             bit = int(ctx.arg('bit'))
-            self.shiftbrite.pulseOtherBit(bit)
+            if ctx.arg('pulse') == '1':
+                self.shiftbrite.pulseOtherBit(bit)
+            else:
+                try:
+                    body = int(request.content.read().strip())
+                except ValueError:
+                    request.setResponseCode(http.BAD_REQUEST)
+                    return "pass pulse=1 param, or a body of '0' or '1'"
+                    
+                self.shiftbrite.setOtherBit(bit, body)
+
             return "ok"
+        else:
+            request.setResponseCode(http.NOT_ALLOWED)
+            request.setHeader('Allow', 'PUT')
+            return ""
 
     def child_videoInput(self, ctx):
         """POST input={0..3}"""
