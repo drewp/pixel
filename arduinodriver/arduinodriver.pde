@@ -19,7 +19,7 @@ int currentChans = MAXCHANS;
 unsigned char rotation = 0; // position of knob
 unsigned char lastRotPosition = 0; // 2*A+1*B
 
-#define TEMP_ENABLED 0
+#define TEMP_ENABLED 1
 
 #if TEMP_ENABLED
 #include <OneWire.h>
