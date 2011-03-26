@@ -8,7 +8,7 @@ import from python to use ShiftBriteOutput class
 """
 
 from __future__ import division
-import sys
+import sys, time
 from collections import namedtuple
 sys.path.append(".")
 import getserial
@@ -16,8 +16,9 @@ import getserial
 Buttons = namedtuple('Buttons', 'blk yel grn red blu rot drot')
 
 class ShiftbriteArduino(object):
-    def __init__(self, numChannels=1):
-        self.ser = getserial.getSerial(9600)
+    def __init__(self, numChannels=1, port='any'):
+        self.ser = getserial.getSerial(9600, port=port)
+        self.ser.flush()
         self.profile = None
         self.numChannels = numChannels
         self.lastRotButton = None
@@ -49,7 +50,11 @@ class ShiftbriteArduino(object):
         self.ser.write("\xff\xfd")
         line = self.ser.readline()
         vals = map(int, line.strip().split())
-
+        if len(vals) != 6:
+            self.ser.flush()
+            time.sleep(1)
+            raise ValueError("arduino input line %r" % line)
+            
         if self.lastRotButton is None:
             dr = 0
         else:
