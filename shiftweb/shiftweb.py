@@ -3,7 +3,7 @@ http interface to a ShiftBrite/MegaBrite
 """
 import sys, logging, jsonlib
 from optparse import OptionParser
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from twisted.python import log
 from nevow import rend, inevow, loaders, appserver, static
 from twisted.web import http
@@ -98,6 +98,8 @@ def main():
     parser.add_option("--failok", action="store_true",
                       help="if the parport can't be opened, start anyway")
     parser.add_option("--channels", type="int", help="number of shiftbrites connected", default=2)
+    parser.add_option("--pollbuttons", action="store_true",
+         help="watch for remote control buttons and send them via OSC to udp localhost:10050")
     opts, args = parser.parse_args()
 
     #log.startLogging(sys.stdout)
@@ -111,6 +113,12 @@ def main():
 
     # also make a looping task that calls update() to correct noise errors
     # in the LED
+
+    if opts.pollbuttons:
+        sys.path.append("../../ariremote")
+        from oscserver import ArduinoWatcher
+        aw = ArduinoWatcher(sb)
+        task.LoopingCall(aw.poll).start(1.0/20)
 
     root = Root(sb)
     reactor.listenTCP(9014, appserver.NevowSite(root))
