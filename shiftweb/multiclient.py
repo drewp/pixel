@@ -11,9 +11,9 @@ def setColor8(lightName, rgb):
     return setColor(lightName, [x * 4 for x in rgb])
 
 server = {
-    'dash' : Resource('http://dash:9014/'),
-    'slash' : Resource('http://slash:9014/'),
-    'star' : Resource('http://star:9014/'),
+    'dash' : Resource('http://dash:9014/', timeout=2),
+    'slash' : Resource('http://slash:9014/', timeout=2),
+    'star' : Resource('http://star:9014/', timeout=2),
     }
 def setColor(lightName, rgb):
     """takes 10-bit r,g,b
