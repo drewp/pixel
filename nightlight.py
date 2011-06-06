@@ -1,8 +1,9 @@
 from __future__ import division
-import time, math, sys, Image, os, logging
+import time, math, sys, Image, os, logging, json, traceback
 from datetime import datetime, timedelta
 from twisted.internet import reactor, task
 from txosc import osc, dispatch, async
+import cyclone.web
 
 sys.path.append("shiftweb")
 from multiclient import setColor
@@ -55,10 +56,19 @@ lightYPos = {
     'ari1' : 225,
     'ari2' : 275,
     'ari3' : 325,
+    'bedroom' : 375,
+    'bedroomBall' : 422,
+    'bedroomWall0' : 450,
+    'bedroomWall1' : 478,
+    'bedroomWall2' : 511,
+    'bedroomWall3' : 541,
 }
 
 class LightState(object):
     def __init__(self):
+        self.lastUpdateTime = 0
+        self.lastErrorTime = 0
+        self.lastError = ""
         self.img = Img("nightlight.png")
         self.autosetAfter = dict.fromkeys(lightYPos.keys(),
                                           datetime.fromtimestamp(0))
@@ -68,16 +78,43 @@ class LightState(object):
         self.autosetAfter[name] = datetime.now() + timedelta(seconds=secs)
 
     def step(self):
-        now = datetime.now()
-        hr = now.hour + now.minute / 60 + now.second / 3600
-        x = int(((hr - 12) % 24) * 50)
-        log.info("x = %s", x)
+        try:
+            now = datetime.now()
+            hr = now.hour + now.minute / 60 + now.second / 3600
+            x = int(((hr - 12) % 24) * 50)
+            log.info("x = %s", x)
 
-        for name, ypos in lightYPos.items():
-            if now > self.autosetAfter[name]:
-                setColor(name, self.img.getColor(x, ypos))
+            for name, ypos in lightYPos.items():
+                if now > self.autosetAfter[name]:
+                    setColor(name, self.img.getColor(x, ypos))
+            self.lastUpdateTime = time.time()
+        except Exception, e:
+            self.lastError = traceback.format_exc()
+            self.lastErrorTime = time.time()
+            
+            
+class IndexHandler(cyclone.web.RequestHandler):
+    def get(self):
+        ls = self.settings.lightState
+        now = time.time()
+        self.set_header("content-type", "application/json")
+        self.set_status(200 if ls.lastUpdateTime > ls.lastErrorTime else 500)
+        self.write(json.dumps(dict(
+            secsSinceLastUpdate=now - ls.lastUpdateTime,
+            secsSinceLastError=now - ls.lastErrorTime,
+            lastError=ls.lastError,
+            ), indent=4))
+
+class Application(cyclone.web.Application):
+    def __init__(self, lightState):
+        handlers = [
+            (r'/', IndexHandler),
+            ]
+        settings = dict(lightState=lightState)
+        cyclone.web.Application.__init__(self, handlers, **settings)
 
 lightState = LightState()
 task.LoopingCall(lightState.step).start(1)
 app = ReceiverApplication(9050, lightState)
+reactor.listenTCP(9051, Application(lightState))
 reactor.run()
