@@ -1,13 +1,13 @@
 from __future__ import division
-import time, math, sys, Image, os, logging, json, traceback
+import time, sys, Image, os, logging, json, traceback
 from datetime import datetime, timedelta
 from twisted.internet import reactor, task
-from txosc import osc, dispatch, async
+from txosc import dispatch, async
 import cyclone.web
 from dateutil.tz import tzlocal
 
 sys.path.append("shiftweb")
-from multiclient import setColor
+from multiclient import setColorAsync
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
 logging.getLogger('restkit.client').setLevel(logging.WARN)
@@ -41,13 +41,13 @@ class ReceiverApplication(object):
         self.receiver = dispatch.Receiver()
         self.receiver.addCallback("/pixel/*", self.pixel_handler)
         self._server_port = reactor.listenUDP(self.port, async.DatagramServerProtocol(self.receiver), interface='0.0.0.0')
-        print("Listening on udp port %s" % (self.port))
+        log.info("Listening OSC on udp port %s" % (self.port))
 
     def pixel_handler(self, message, address):
         light = message.address.split('/')[2]
         rgb = [a.value * 1023 for a in message.arguments]
         print "OSC: set %s to %s" % (light, rgb)
-        setColor(light, rgb)
+        setColorAsync(light, rgb)
         self.lightState.mute(light, 3)
 
 lightYPos = {
@@ -87,9 +87,9 @@ class LightState(object):
 
             for name, ypos in lightYPos.items():
                 if now > self.autosetAfter[name]:
-                    setColor(name, self.img.getColor(x, ypos))
+                    setColorAsync(name, self.img.getColor(x, ypos))
             self.lastUpdateTime = time.time()
-        except Exception, e:
+        except Exception:
             self.lastError = traceback.format_exc()
             self.lastErrorTime = time.time()
             
@@ -106,16 +106,11 @@ class IndexHandler(cyclone.web.RequestHandler):
             lastError=ls.lastError,
             ), indent=4))
 
-class Application(cyclone.web.Application):
-    def __init__(self, lightState):
-        handlers = [
-            (r'/', IndexHandler),
-            ]
-        settings = dict(lightState=lightState)
-        cyclone.web.Application.__init__(self, handlers, **settings)
-
 lightState = LightState()
 task.LoopingCall(lightState.step).start(1)
 app = ReceiverApplication(9050, lightState)
-reactor.listenTCP(9051, Application(lightState))
+log.info("listening http on 9051")
+reactor.listenTCP(9051, cyclone.web.Application([
+    (r'/', IndexHandler),
+    ], lightState=lightState))
 reactor.run()
