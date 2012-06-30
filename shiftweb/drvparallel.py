@@ -34,7 +34,8 @@ class ShiftbriteParallel(object):
 
     def _out(self, byte):
         """mixes in otherBits and writes to parport"""
-        self.port.setData(byte | self.otherBits)
+        self.lastData = byte | self.otherBits
+        self.port.setData(self.lastData)
         
     def _dataBit(self, x):
         out = 0
@@ -109,6 +110,9 @@ class ShiftbriteParallel(object):
         else:
             self.otherBits &= ~(1<<bit)
         self._out(0)
+
+    def getOtherBit(self, bit):
+        return (self.lastData & (1<<bit)) != 0
 
 if __name__ == '__main__':
     from math import sin
