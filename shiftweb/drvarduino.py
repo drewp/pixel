@@ -22,6 +22,9 @@ class ShiftbriteArduino(object):
         self.profile = None
         self.numChannels = numChannels
         self.lastRotButton = None
+
+    def ping(self):
+        raise NotImplementedError
         
     def setProfile(self, name):
         """apply some named transfer function on levels before they're

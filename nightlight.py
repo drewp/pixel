@@ -4,12 +4,13 @@ from datetime import datetime, timedelta
 from twisted.internet import reactor, task
 from txosc import osc, dispatch, async
 import cyclone.web
+from dateutil.tz import tzlocal
 
 sys.path.append("shiftweb")
 from multiclient import setColor
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
-log.setLevel(logging.WARN)
+logging.getLogger('restkit.client').setLevel(logging.WARN)
 
 class Img(object):
     def __init__(self, filename):
@@ -56,12 +57,12 @@ lightYPos = {
     'ari1' : 225,
     'ari2' : 275,
     'ari3' : 325,
-    'bedroom' : 375,
-    'bedroomBall' : 422,
-    'bedroomWall0' : 450,
-    'bedroomWall1' : 478,
-    'bedroomWall2' : 511,
-    'bedroomWall3' : 541,
+#    'bedroom' : 375,
+#    'bedroomBall' : 422,
+#    'bedroomWall0' : 450,
+#    'bedroomWall1' : 478,
+#    'bedroomWall2' : 511,
+#    'bedroomWall3' : 541,
 }
 
 class LightState(object):
@@ -71,18 +72,18 @@ class LightState(object):
         self.lastError = ""
         self.img = Img("nightlight.png")
         self.autosetAfter = dict.fromkeys(lightYPos.keys(),
-                                          datetime.fromtimestamp(0))
+                                          datetime.fromtimestamp(0, tzlocal()))
 
     def mute(self, name, secs):
         """don't autoset this light for a few seconds"""
-        self.autosetAfter[name] = datetime.now() + timedelta(seconds=secs)
+        self.autosetAfter[name] = datetime.now(tzlocal()) + timedelta(seconds=secs)
 
     def step(self):
         try:
-            now = datetime.now()
+            now = datetime.now(tzlocal())
             hr = now.hour + now.minute / 60 + now.second / 3600
             x = int(((hr - 12) % 24) * 50)
-            log.info("x = %s", x)
+            log.debug("x = %s", x)
 
             for name, ypos in lightYPos.items():
                 if now > self.autosetAfter[name]:

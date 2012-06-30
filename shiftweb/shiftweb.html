@@ -39,16 +39,20 @@
     <script type="text/javascript">
       $(document).ready(function() {
 	  var picker = $.farbtastic('#colorpicker', function (newColor) {
-	      $.post('color', {channel: '0', color: newColor});
+	      $.ajax({
+		  type: "PUT", 
+		  url: "brite/0",
+		  data: newColor
+	      });
 	  });
 	  
-	  $.get('color', {channel: '0'}, picker.setColor);
+	  $.get('brite/0', picker.setColor);
 
 	  function updateTemperature() {
 	      $.getJSON('temperature', {}, function (data, status) {
 		  $("#temperature").text(data.temp);
 	      });
-	      setTimeout(updateTemperature, 1000);
+	      setTimeout(updateTemperature, 10000);
 	  }
 	  updateTemperature();
 
@@ -61,16 +65,6 @@
     </div>
 
     <hr/>
-
-    <div class="manual">
-      <form method="POST" action="color">
-	<div>
-	  Channel: <input type="text" name="channel" value="0" size="3"/>
-	  Color: <input type="text" name="color" value="#ffffff" size="7"/>
-	</div>
-	<div><input type="submit" value="Post color"/></div>
-      </form>
-    </div>
 
     <div>Current temperature: <span id="temperature"/></div>
 

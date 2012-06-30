@@ -1,7 +1,7 @@
 """
 http interface to a ShiftBrite/MegaBrite
 """
-import sys, logging, jsonlib
+import sys, logging, json
 from optparse import OptionParser
 from twisted.internet import reactor, task
 from twisted.python import log
@@ -25,6 +25,22 @@ def rgbFromHex(h):
 def hexFromRgb(rgb):
     return rgb_to_hex(tuple([x // 4 for x in rgb]))
 
+class Brite(rend.Page):
+    def __init__(self, shiftbrite, colors):
+        self.shiftbrite, self.colors = shiftbrite, colors
+        
+    def locateChild(self, ctx, segments):
+        request = inevow.IRequest(ctx)
+        if request.method == 'PUT':
+            channel = int(segments[0])
+            self.colors[channel] = rgbFromHex(request.content.read())
+            self.shiftbrite.update(self.colors)
+            return str("updated %r" % self.colors), []
+        elif request.method == 'GET':
+            return str(hexFromRgb(self.colors[int(segments[0])])), []
+        raise NotImplementedError
+        
+
 class Root(rend.Page):
     docFactory = loaders.xmlfile("shiftweb.html")
 
@@ -38,20 +54,12 @@ class Root(rend.Page):
     def child_static(self, ctx):
         return static.File("static")
 
-    def child_color(self, ctx):
+    def child_brite(self, ctx):
         """support for
-              GET /color?channel=0
+              GET /brite/0
            and
-              POST /color?channel=0&color=#ffe060"""
-        request = inevow.IRequest(ctx)
-        if request.method == 'POST':
-            channel = int(ctx.arg('channel'))
-            self.colors[channel] = rgbFromHex(ctx.arg('color'))
-            self.shiftbrite.update(self.colors)
-            return "updated %r" % self.colors
-        elif request.method == 'GET':
-            return hexFromRgb(self.colors[int(ctx.arg('channel'))])
-        raise NotImplementedError
+              PUT /brite/0 <- #ffe060"""
+        return Brite(self.shiftbrite, self.colors)
 
     def child_otherBit(self, ctx):
         request = inevow.IRequest(ctx)
@@ -69,9 +77,12 @@ class Root(rend.Page):
                 self.shiftbrite.setOtherBit(bit, body)
 
             return "ok"
+        elif request.method == 'GET':
+            bit = int(ctx.arg('bit'))
+            return str(int(self.shiftbrite.getOtherBit(bit)))
         else:
             request.setResponseCode(http.NOT_ALLOWED)
-            request.setHeader('Allow', 'PUT')
+            request.setHeader('Allow', 'PUT,GET')
             return ""
 
     def child_videoInput(self, ctx):
@@ -85,7 +96,7 @@ class Root(rend.Page):
 
     def child_temperature(self, ctx):
         inevow.IRequest(ctx).setHeader("Content-type", "application/json")
-        return jsonlib.write({"temp" : self.shiftbrite.getTemperature()})
+        return json.dumps({"temp" : self.shiftbrite.getTemperature()})
 
 
 def main():
@@ -102,7 +113,8 @@ def main():
          help="watch for remote control buttons and send them via OSC to udp localhost:10050")
     opts, args = parser.parse_args()
 
-    #log.startLogging(sys.stdout)
+    import twisted.python
+    #twisted.python.log.startLogging(sys.stdout)
 
     if opts.parallel:
         sb = ShiftbriteParallel(dummyModeOk=opts.failok, numChannels=1)
