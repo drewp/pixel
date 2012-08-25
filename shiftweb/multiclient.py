@@ -19,11 +19,11 @@ lightResource = {
     'ari1' :         'http://star:9014/brite/0',
     'ari2' :         'http://star:9014/brite/1',
     'ari3' :         'http://star:9014/brite/2',
-    'bedroom' :      'http://bang:9060/brite/0',
-    'bedroomWall0' : 'http://bang:9060/brite/1',
-    'bedroomWall1' : 'http://bang:9060/brite/2',
-    'bedroomWall2' : 'http://bang:9060/brite/3',
-    'bedroomWall3' : 'http://bang:9060/brite/4',
+    'bedroom' :      'http://bang:9088/brite/0',
+    'bedroomWall0' : 'http://bang:9088/brite/1',
+    'bedroomWall1' : 'http://bang:9088/brite/2',
+    'bedroomWall2' : 'http://bang:9088/brite/3',
+    'bedroomWall3' : 'http://bang:9088/brite/4',
     'slash-zwave' :  'http://slash:9082', 
     }
 

@@ -11,6 +11,7 @@ from multiclient import setColorAsync
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
 logging.getLogger('restkit.client').setLevel(logging.WARN)
+#log.setLevel(logging.DEBUG)
 
 class Img(object):
     def __init__(self, filename):
@@ -57,12 +58,12 @@ lightYPos = {
     'ari1' : 225,
     'ari2' : 275,
     'ari3' : 325,
-#    'bedroom' : 375,
-#    'bedroomBall' : 422,
-#    'bedroomWall0' : 450,
-#    'bedroomWall1' : 478,
-#    'bedroomWall2' : 511,
-#    'bedroomWall3' : 541,
+    'bedroom' : 375,
+    'bedroomBall' : 422,
+    'bedroomWall0' : 450,
+    'bedroomWall1' : 478,
+    'bedroomWall2' : 511,
+    'bedroomWall3' : 541,
 }
 
 class LightState(object):
@@ -87,7 +88,8 @@ class LightState(object):
 
             for name, ypos in lightYPos.items():
                 if now > self.autosetAfter[name]:
-                    setColorAsync(name, self.img.getColor(x, ypos))
+                    c = self.img.getColor(x, ypos)
+                    setColorAsync(name, c)
             self.lastUpdateTime = time.time()
         except Exception:
             self.lastError = traceback.format_exc()
@@ -107,7 +109,7 @@ class IndexHandler(cyclone.web.RequestHandler):
             ), indent=4))
 
 lightState = LightState()
-task.LoopingCall(lightState.step).start(1)
+task.LoopingCall(lightState.step).start(2)
 app = ReceiverApplication(9050, lightState)
 log.info("listening http on 9051")
 reactor.listenTCP(9051, cyclone.web.Application([
