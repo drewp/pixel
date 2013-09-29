@@ -15,7 +15,10 @@ def setColor8(lightName, rgb):
 lightResource = {
     'deskLeft' :     'http://dash:9014/brite/0',
     'deskRight' :    'http://dash:9014/brite/1',
-    'bathroom' :     'http://slash:9050/brite/0',
+    'bathroom0' :     'http://slash:9050/brite/0',
+    'bathroom1' :     'http://slash:9050/brite/1',
+    'bathroom2' :     'http://slash:9050/brite/2',
+    'bathroom3' :     'http://slash:9050/brite/3',
     'ari1' :         'http://star:9014/brite/0',
     'ari2' :         'http://star:9014/brite/1',
     'ari3' :         'http://star:9014/brite/2',

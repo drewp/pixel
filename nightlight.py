@@ -54,7 +54,10 @@ class ReceiverApplication(object):
 lightYPos = {
     'deskLeft' : 125,
     'deskRight' : 175,
-    'bathroom' : 75,
+    'bathroom0' : 75,
+    'bathroom1' : 75,
+    'bathroom2' : 75,
+    'bathroom3' : 75,
     'ari1' : 225,
     'ari2' : 275,
     'ari3' : 325,
